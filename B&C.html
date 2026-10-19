@@ -15,6 +15,36 @@
   --muted: #afc0d0;
   --blue: #73d9ff;
 }
+  
+.page-nav {
+  position: fixed;
+  z-index: 100;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #526575;
+  border-radius: 12px;
+  background: rgba(12, 20, 29, 0.95);
+}
+
+.page-nav a {
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: #eff7fb;
+  background: #1a2b39;
+  font: 12px system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.page-nav a:hover {
+  background: #14504b;
+}
+
 
 * { box-sizing: border-box; }
 
@@ -312,6 +342,14 @@ input[type="checkbox"] {
 
 <div id="error"></div>
 
+<nav class="page-nav">
+  <a href="index.html">Campus Overview</a>
+  <a href="blockA.html">Block A</a>
+  <a href="B&C.html">Block B</a>
+  <a href="C.html">Block C</a>
+</nav>
+
+  
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
