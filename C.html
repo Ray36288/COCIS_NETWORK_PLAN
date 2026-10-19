@@ -1,0 +1,1323 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block C | 3D Campus Network Explorer</title>
+
+<style>
+
+.page-nav {
+  position: fixed;
+  z-index: 100;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #526575;
+  border-radius: 12px;
+  background: rgba(12, 20, 29, 0.95);
+}
+
+.page-nav a {
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: #eff7fb;
+  background: #1a2b39;
+  font: 12px system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.page-nav a:hover {
+  background: #14504b;
+}
+
+  :root {
+  color-scheme: dark;
+  --panel: rgba(15, 25, 37, .94);
+  --border: rgba(222, 237, 248, .17);
+  --text: #edf5fc;
+  --muted: #afc0cf;
+  --blue: #73d9ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: Inter, Arial, sans-serif;
+  background: #c5d1d9;
+  color: var(--text);
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.panel {
+  position: fixed;
+  z-index: 5;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: 0 15px 45px rgba(0,0,0,.20);
+  backdrop-filter: blur(12px);
+}
+
+#controls {
+  left: 14px;
+  top: 14px;
+  width: min(335px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 7px;
+  font-size: 19px;
+}
+
+.description {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.section {
+  margin: 15px 0 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #a4b9cc;
+}
+
+.floor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+button {
+  min-height: 36px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+button:hover,
+button.active {
+  border-color: var(--blue);
+  background: rgba(115,217,255,.16);
+}
+
+.primary {
+  border-color: rgba(115,217,255,.5);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--blue);
+}
+
+#selection {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+#selection-title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+#selection-text {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+#legend {
+  top: 14px;
+  right: 14px;
+  padding: 12px 14px;
+  font-size: 10px;
+  line-height: 1.9;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+}
+
+#status {
+  position: fixed;
+  right: 14px;
+  top: 150px;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+#hint {
+  right: 14px;
+  bottom: 14px;
+  max-width: 310px;
+  padding: 11px 13px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: #dce5eb;
+  color: #243444;
+}
+
+#error {
+  display: none;
+  position: fixed;
+  z-index: 30;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  padding: 14px;
+  background: #531c29;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 650px) {
+  #controls {
+    left: 7px;
+    top: 7px;
+    width: 255px;
+    max-height: calc(100vh - 14px);
+    padding: 12px;
+  }
+
+  #legend {
+    top: 7px;
+    right: 7px;
+    max-width: 145px;
+    padding: 8px;
+    font-size: 9px;
+  }
+
+  #status {
+    top: 135px;
+    right: 7px;
+    max-width: 145px;
+  }
+
+  #hint {
+    right: 7px;
+    bottom: 7px;
+    width: 175px;
+    font-size: 9px;
+  }
+}
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body>
+
+<div id="loading">Loading Block C 3D building...</div>
+<canvas id="scene"></canvas>
+
+<aside id="controls" class="panel">
+  <h1>Block C</h1>
+
+  <div class="description">
+    Three-level campus building with student computer laboratories,
+    academic offices, administrative offices and proposed wireless access
+    points on every level.
+  </div>
+
+  <div class="section">Select a floor</div>
+
+  <div class="floor-grid">
+    <button data-floor="1">Level 1</button>
+    <button data-floor="2">Level 2</button>
+    <button data-floor="3">Level 3</button>
+  </div>
+
+  <div class="section">Building controls</div>
+
+  <div class="actions">
+    <button id="show-all" class="primary">Show all floors</button>
+    <button id="separate">Separate floors</button>
+    <button id="reassemble">Reassemble</button>
+    <button id="reset-camera">Reset camera</button>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" id="ghost">
+    Make other floors transparent
+  </label>
+
+  <div id="selection">
+    <div id="selection-title">Block C overview</div>
+    <div id="selection-text">
+      Three levels contain student computer laboratories and academic
+      and administrative staff offices. One proposed wireless access
+      point is shown on each level, with IP cameras on all floors.
+    </div>
+  </div>
+
+  <div class="description" style="margin-top:12px">
+    <strong>Blue:</strong> Wireless access points<br>
+    <strong>Green:</strong> LAN cable routes<br>
+    <strong>Dark grey:</strong> Network switches<br>
+    <strong>Grey:</strong> Concrete structure
+  </div>
+
+  <div class="description" style="margin-top:12px">
+    The floor plan is illustrative. Each AP is labelled for up to
+    100 users as proposed; real capacity depends on the equipment,
+    radio conditions and actual user demand.
+  </div>
+</aside>
+
+<div id="legend" class="panel">
+  <strong>Network infrastructure</strong><br>
+  <span class="dot" style="background:#61d5ff"></span>Wi-Fi access point<br>
+  <span class="dot" style="background:#42d49a"></span>LAN cabling<br>
+  <span class="dot" style="background:#f1c66b"></span>Activity lights<br>
+  <span class="dot" style="background:#aeb9c1"></span>Concrete
+</div>
+
+<div id="status" class="panel">Block C · All floors</div>
+
+<div id="hint" class="panel">
+  Drag to rotate · Scroll to zoom · Right-drag to pan.
+  Select a floor, separate the building levels, or reassemble the building.
+</div>
+
+<div id="error"></div>
+
+<nav class="page-nav">
+  <a href="index.html">Campus Overview</a>
+  <a href="blockA.html">Block A</a>
+  <a href="B&C.html">Block B</a>
+  <a href="C.html">Block C</a>
+</nav>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// -----------------------------------------------------
+// BASIC SETTINGS
+// -----------------------------------------------------
+
+const $ = id => document.getElementById(id);
+
+const canvas = $('scene');
+
+const FLOORS = 3;
+const FLOOR_HEIGHT = 3.25;
+const WIDTH = 14;
+const DEPTH = 10;
+const HALF_W = WIDTH / 2;
+const HALF_D = DEPTH / 2;
+
+// -----------------------------------------------------
+// SCENE, CAMERA AND RENDERER
+// -----------------------------------------------------
+
+const scene = new THREE.Scene();
+
+scene.background = new THREE.Color('#c6d2da');
+scene.fog = new THREE.Fog('#c6d2da', 40, 85);
+
+const camera = new THREE.PerspectiveCamera(
+  43,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  200
+);
+
+const HOME_CAMERA = new THREE.Vector3(19, 15, 23);
+
+camera.position.copy(HOME_CAMERA);
+
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+
+const controls = new OrbitControls(camera, renderer.domElement);
+
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 4.9, 0);
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 8;
+controls.maxDistance = 55;
+
+scene.add(
+  new THREE.HemisphereLight(0xeaf5ff, 0x68737a, 2.1)
+);
+
+const sunlight = new THREE.DirectionalLight(0xfff1dc, 3);
+
+sunlight.position.set(-18, 25, 20);
+sunlight.castShadow = true;
+sunlight.shadow.mapSize.set(2048, 2048);
+sunlight.shadow.camera.left = -24;
+sunlight.shadow.camera.right = 24;
+sunlight.shadow.camera.top = 28;
+sunlight.shadow.camera.bottom = -23;
+
+scene.add(sunlight);
+
+const fillLight = new THREE.DirectionalLight(0xc5e7ff, 1.0);
+fillLight.position.set(20, 12, -16);
+scene.add(fillLight);
+
+// -----------------------------------------------------
+// MATERIALS
+// -----------------------------------------------------
+
+function makeMaterial(color, roughness = 0.75, metalness = 0) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness,
+    metalness
+  });
+}
+
+const M = {
+  concrete: makeMaterial('#c7cdd0', 0.9),
+  slab: makeMaterial('#929da4', 0.85),
+  floor: makeMaterial('#e1e1da', 0.9),
+  wall: makeMaterial('#e6e8e5', 0.9),
+  frame: makeMaterial('#51616c', 0.45, 0.4),
+  desk: makeMaterial('#b8a48c', 0.75),
+  metal: makeMaterial('#4d5963', 0.48, 0.4),
+  screen: makeMaterial('#172d3d', 0.26, 0.1),
+  chair: makeMaterial('#3c5a70', 0.8),
+  rack: makeMaterial('#27343f', 0.5, 0.4),
+  rackFront: makeMaterial('#64727b', 0.4, 0.35),
+  green: makeMaterial('#43d49a', 0.4, 0.1),
+  blue: makeMaterial('#60d7ff', 0.25, 0.1),
+  camera: makeMaterial('#26343f', 0.35, 0.35),
+  white: makeMaterial('#fff3cd', 0.35),
+  office: makeMaterial('#d5d8d7', 0.9),
+  keyboard: makeMaterial('#303a42', 0.6)
+};
+
+const glassMaterial = new THREE.MeshPhysicalMaterial({
+  color: '#87cce1',
+  roughness: 0.22,
+  metalness: 0.08,
+  transparent: true,
+  opacity: 0.26,
+  side: THREE.DoubleSide
+});
+
+// -----------------------------------------------------
+// GEOMETRY HELPERS
+// -----------------------------------------------------
+
+function box(
+  parent,
+  width, height, depth,
+  material, x, y, z,
+  castShadow = true
+) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    material
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = true;
+
+  parent.add(mesh);
+  return mesh;
+}
+
+function cylinder(
+  parent, radiusTop, radiusBottom, height,
+  material, x, y, z, segments = 12
+) {
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      radiusTop, radiusBottom, height, segments
+    ),
+    material
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  parent.add(mesh);
+
+  return mesh;
+}
+
+function addLabel(parent, text, x, y, z, scale = 1) {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = 640;
+  canvas.height = 128;
+
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = 'rgba(15,29,41,.92)';
+  ctx.beginPath();
+  ctx.roundRect(4, 4, 632, 120, 16);
+  ctx.fill();
+
+  ctx.strokeStyle = '#73d9ff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = '#f0f8ff';
+
+  const fontSize = Math.min(
+    42,
+    520 / Math.max(10, text.length * 0.58)
+  );
+
+  ctx.font = `bold ${fontSize}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 320, 64, 590);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true
+    })
+  );
+
+  sprite.scale.set(3.5 * scale, 0.7 * scale, 1);
+  sprite.position.set(x, y, z);
+
+  parent.add(sprite);
+  return sprite;
+}
+
+function addCable(parent, points, radius = 0.025) {
+  const curve = new THREE.CatmullRomCurve3(
+    points.map(point =>
+      new THREE.Vector3(point[0], point[1], point[2])
+    )
+  );
+
+  const mesh = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 28, radius, 6, false),
+    M.green
+  );
+
+  mesh.castShadow = false;
+  parent.add(mesh);
+}
+
+// -----------------------------------------------------
+// COMPUTER WORKSTATIONS
+// -----------------------------------------------------
+
+function addComputer(parent, x, z, scale = 1) {
+  // Desk top
+  box(
+    parent,
+    0.75 * scale, 0.07 * scale, 0.48 * scale,
+    M.desk, x, 0.87 * scale, z
+  );
+
+  // Four desk legs
+  for (const dx of [-0.30, 0.30]) {
+    for (const dz of [-0.18, 0.18]) {
+      box(
+        parent,
+        0.035 * scale, 0.65 * scale, 0.035 * scale,
+        M.metal,
+        x + dx * scale,
+        0.52 * scale,
+        z + dz * scale,
+        false
+      );
+    }
+  }
+
+  // Monitor
+  box(
+    parent, 0.34 * scale, 0.24 * scale, 0.045 * scale,
+    M.frame, x, 1.05 * scale, z - 0.14 * scale
+  );
+
+  box(
+    parent, 0.30 * scale, 0.19 * scale, 0.012 * scale,
+    M.screen, x, 1.05 * scale, z - 0.112 * scale,
+    false
+  );
+
+  // Monitor stand and keyboard
+  box(
+    parent, 0.04 * scale, 0.12 * scale, 0.04 * scale,
+    M.metal, x, 0.93 * scale, z - 0.12 * scale,
+    false
+  );
+
+  box(
+    parent, 0.24 * scale, 0.018 * scale, 0.085 * scale,
+    M.keyboard, x, 0.915 * scale, z + 0.10 * scale,
+    false
+  );
+
+  // Chair
+  box(
+    parent, 0.34 * scale, 0.06 * scale, 0.31 * scale,
+    M.chair, x, 0.49 * scale, z + 0.45 * scale
+  );
+
+  box(
+    parent, 0.34 * scale, 0.31 * scale, 0.055 * scale,
+    M.chair, x, 0.67 * scale, z + 0.58 * scale
+  );
+
+  cylinder(
+    parent, 0.025 * scale, 0.025 * scale, 0.22 * scale,
+    M.metal, x, 0.36 * scale, z + 0.45 * scale, 8
+  );
+}
+
+function addComputerRows(parent, options = {}) {
+  const cols = options.cols ?? 5;
+  const rows = options.rows ?? 3;
+  const startX = options.startX ?? -4.7;
+  const startZ = options.startZ ?? -2.0;
+  const spacingX = options.spacingX ?? 1.25;
+  const spacingZ = options.spacingZ ?? 1.45;
+  const scale = options.scale ?? 0.9;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      addComputer(
+        parent,
+        startX + col * spacingX,
+        startZ + row * spacingZ,
+        scale
+      );
+    }
+  }
+}
+
+// -----------------------------------------------------
+// NETWORK EQUIPMENT
+// -----------------------------------------------------
+
+function addNetworkRack(parent, x, z) {
+  box(parent, 0.90, 2.12, 0.78,
+    M.rack, x, 1.33, z);
+
+  box(parent, 0.79, 1.92, 0.045,
+    M.rackFront, x, 1.33, z + 0.415);
+
+  for (let i = 0; i < 6; i++) {
+    const y = 0.53 + i * 0.29;
+
+    box(parent, 0.66, 0.13, 0.045,
+      M.screen, x, y, z + 0.445);
+
+    for (let j = 0; j < 8; j++) {
+      const ledMaterial = j % 3 === 0 ? M.blue : M.green;
+
+      box(
+        parent, 0.025, 0.025, 0.02,
+        ledMaterial,
+        x - 0.26 + j * 0.072,
+        y,
+        z + 0.473,
+        false
+      );
+    }
+  }
+
+  addLabel(parent, 'ACCESS SWITCH', x, 2.55, z, 0.42);
+}
+
+// -----------------------------------------------------
+// WI-FI ACCESS POINT + COVERAGE RINGS
+// -----------------------------------------------------
+
+function addAccessPoint(parent, x, z) {
+  // AP mounted near the ceiling
+  cylinder(
+    parent, 0.14, 0.14, 0.07,
+    M.frame, x, 2.69, z, 16
+  );
+
+  cylinder(
+    parent, 0.045, 0.045, 0.04,
+    M.blue, x, 2.75, z, 12
+  );
+
+  // Visible wireless coverage indicators
+  const ring1 = new THREE.Mesh(
+    new THREE.RingGeometry(0.28, 0.34, 40),
+    new THREE.MeshBasicMaterial({
+      color: '#60d7ff',
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85
+    })
+  );
+
+  ring1.rotation.x = -Math.PI / 2;
+  ring1.position.set(x, 2.60, z);
+  parent.add(ring1);
+
+  const ring2 = new THREE.Mesh(
+    new THREE.RingGeometry(0.45, 0.50, 40),
+    new THREE.MeshBasicMaterial({
+      color: '#60d7ff',
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.48
+    })
+  );
+
+  ring2.rotation.x = -Math.PI / 2;
+  ring2.position.set(x, 2.595, z);
+  parent.add(ring2);
+
+  addLabel(
+    parent,
+    'WI-FI AP · UP TO 100 USERS',
+    x, 2.26, z + 0.55, 0.38
+  );
+}
+
+// -----------------------------------------------------
+// IP CAMERAS
+// -----------------------------------------------------
+
+function addIPCamera(parent, x, z) {
+  // Mount
+  box(parent, 0.19, 0.065, 0.19,
+    M.camera, x, 2.61, z);
+
+  // Camera body
+  const body = box(
+    parent, 0.13, 0.09, 0.20,
+    M.camera, x, 2.53, z + 0.10
+  );
+
+  body.rotation.x = 0.14;
+
+  // Lens
+  const lens = cylinder(
+    parent, 0.04, 0.04, 0.025,
+    M.blue, x, 2.53, z + 0.205, 12
+  );
+
+  lens.rotation.x = Math.PI / 2;
+}
+
+function addCamerasToFloor(parent) {
+  addIPCamera(parent, -HALF_W + 0.40, HALF_D - 0.35);
+  addIPCamera(parent, HALF_W - 0.40, HALF_D - 0.35);
+  addIPCamera(parent, -HALF_W + 0.40, -HALF_D + 0.35);
+  addIPCamera(parent, HALF_W - 0.40, -HALF_D + 0.35);
+}
+
+// -----------------------------------------------------
+// STAFF OFFICES
+// -----------------------------------------------------
+
+function addOfficeDesk(parent, x, z) {
+  box(parent, 0.95, 0.07, 0.53,
+    M.desk, x, 0.87, z);
+
+  for (const dx of [-0.38, 0.38]) {
+    for (const dz of [-0.18, 0.18]) {
+      box(parent, 0.04, 0.66, 0.04,
+        M.metal, x + dx, 0.52, z + dz, false);
+    }
+  }
+
+  box(parent, 0.34, 0.24, 0.045,
+    M.frame, x, 1.05, z - 0.14);
+
+  box(parent, 0.30, 0.19, 0.012,
+    M.screen, x, 1.05, z - 0.11, false);
+
+  box(parent, 0.34, 0.06, 0.30,
+    M.chair, x, 0.49, z + 0.49);
+
+  box(parent, 0.34, 0.31, 0.055,
+    M.chair, x, 0.67, z + 0.61);
+}
+
+function addOfficeArea(parent) {
+  // Partitions separate staff offices from the laboratory.
+  box(parent, 0.10, 1.95, 3.45,
+    M.office, 1.65, 1.23, 1.70);
+
+  box(parent, 5.30, 1.95, 0.10,
+    M.office, 4.20, 1.23, 3.36);
+
+  // Three office desks
+  addOfficeDesk(parent, 3.0, 2.15);
+  addOfficeDesk(parent, 4.65, 2.15);
+  addOfficeDesk(parent, 3.0, 0.55);
+
+  addLabel(
+    parent,
+    'ACADEMIC + ADMIN OFFICES',
+    4.1, 2.40, 4.25, 0.38
+  );
+}
+
+// -----------------------------------------------------
+// EACH FLOOR'S INTERIOR
+// -----------------------------------------------------
+
+function addInterior(parent, level) {
+  // Main student computing laboratory:
+  // representative workstations, not a specified total.
+  addComputerRows(parent, {
+    cols: 5,
+    rows: 3,
+    startX: -4.8,
+    startZ: -2.05,
+    spacingX: 1.20,
+    spacingZ: 1.48,
+    scale: 0.9
+  });
+
+  // Staff workspace is included on every level.
+  addOfficeArea(parent);
+
+  // One proposed access point per level.
+  addAccessPoint(parent, 0, -0.2);
+
+  // Local access switch in the staff/network equipment area.
+  addNetworkRack(parent, 6.0, -3.35);
+
+  // Floor label
+  addLabel(
+    parent,
+    `BLOCK C · LEVEL ${level}`,
+    0, 2.62, HALF_D + 0.20, 0.47
+  );
+
+  // Explicit per-level purpose labels
+  const purpose =
+    level === 1 ? 'STUDENT LAB + STAFF OFFICES' :
+    level === 2 ? 'COMPUTER LAB + OFFICES' :
+                  'STUDENT LAB + STAFF OFFICES';
+
+  addLabel(parent, purpose, -3.5, 2.30, 5.78, 0.38);
+}
+
+// -----------------------------------------------------
+// BUILDING STRUCTURE
+// -----------------------------------------------------
+
+const building = new THREE.Group();
+scene.add(building);
+
+const floorGroups = [];
+
+function createFloor(level) {
+  const group = new THREE.Group();
+
+  group.userData.level = level;
+  group.position.y = (level - 1) * FLOOR_HEIGHT;
+
+  building.add(group);
+  floorGroups.push(group);
+
+  // Concrete floor slab
+  box(group, WIDTH, 0.25, DEPTH,
+    M.slab, 0, 0.13, 0);
+
+  box(group, WIDTH - 0.2, 0.025, DEPTH - 0.2,
+    M.floor, 0, 0.275, 0);
+
+  // Rear wall and solid side walls
+  box(group, WIDTH, 2.70, 0.15,
+    M.wall, 0, 1.61, -HALF_D + 0.075);
+
+  box(group, 0.15, 2.70, DEPTH,
+    M.wall, -HALF_W + 0.075, 1.61, 0);
+
+  box(group, 0.15, 2.70, DEPTH,
+    M.wall, HALF_W - 0.075, 1.61, 0);
+
+  // Glass front wall
+  box(group, WIDTH - 0.34, 2.48, 0.06,
+    glassMaterial, 0, 1.62, HALF_D - 0.09, false);
+
+  // Glass framing
+  for (
+    let x = -HALF_W + 0.30;
+    x <= HALF_W - 0.1;
+    x += 2
+  ) {
+    box(group, 0.055, 2.55, 0.09,
+      M.frame, x, 1.62, HALF_D - 0.12);
+  }
+
+  box(group, WIDTH - 0.2, 0.09, 0.12,
+    M.frame, 0, 0.42, HALF_D - 0.12);
+
+  box(group, WIDTH - 0.2, 0.09, 0.12,
+    M.frame, 0, 2.86, HALF_D - 0.12);
+
+  // Glazing on the right side
+  box(group, 0.055, 2.5, DEPTH - 0.5,
+    glassMaterial, HALF_W - 0.11, 1.62, 0, false);
+
+  for (let z = -HALF_D + 0.5; z < HALF_D; z += 2) {
+    box(group, 0.085, 2.5, 0.055,
+      M.frame, HALF_W - 0.14, 1.62, z);
+  }
+
+  // Concrete structural columns
+  for (const x of [-HALF_W + 0.3, 0, HALF_W - 0.3]) {
+    for (const z of [-HALF_D + 0.25, HALF_D - 0.25]) {
+      box(group, 0.30, 2.95, 0.30,
+        M.concrete, x, 1.63, z);
+    }
+  }
+
+  // Lift / service-core representation
+  box(group, 1.20, 2.60, 1.55,
+    M.concrete, -5.45, 1.55, -3.65);
+
+  box(group, 0.80, 2.10, 0.05,
+    M.frame, -5.45, 1.42, -2.85);
+
+  // Interior: student computers, offices, one AP.
+  addInterior(group, level);
+
+  // Four security cameras on every level.
+  addCamerasToFloor(group);
+
+  // Vertical LAN riser connecting the floors.
+  box(group, 0.09, 2.45, 0.09,
+    M.green, HALF_W - 0.55, 1.52, -HALF_D + 0.45, false);
+
+  // Ceiling lighting
+  for (const x of [-4.6, -1.5, 2.0, 4.7]) {
+    box(group, 1.15, 0.045, 0.24,
+      M.white, x, 2.78, 0, false);
+  }
+
+  // Green LAN routes inside the floor.
+  addCable(group, [
+    [6.0, 2.56, -3.35],
+    [4.5, 2.56, -2.7],
+    [2.6, 2.56, -1.2],
+    [0, 2.56, -0.2]
+  ]);
+
+  addCable(group, [
+    [0, 2.56, -0.2],
+    [-2.0, 2.56, 0.3],
+    [-4.3, 2.56, 1.0]
+  ]);
+
+  return group;
+}
+
+for (let level = 1; level <= FLOORS; level++) {
+  createFloor(level);
+}
+
+// -----------------------------------------------------
+// ROOF, ENTRANCE AND GROUND
+// -----------------------------------------------------
+
+const roof = new THREE.Group();
+building.add(roof);
+
+box(roof, WIDTH + 0.35, 0.30, DEPTH + 0.35,
+  M.concrete, 0, 0, 0);
+
+roof.position.y = FLOORS * FLOOR_HEIGHT;
+
+// Glass entrance, attached to the building.
+// No external server or rack is placed outside.
+const entrance = new THREE.Group();
+building.add(entrance);
+
+box(entrance, 2.3, 2.25, 0.12,
+  M.frame, 0, 1.35, HALF_D + 0.12);
+
+box(entrance, 2.0, 1.95, 0.05,
+  glassMaterial, 0, 1.38, HALF_D + 0.20, false);
+
+box(entrance, 3.1, 0.12, 1.1,
+  M.concrete, 0, 2.58, HALF_D + 0.52);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(90, 90),
+  makeMaterial('#9ba9b0', 1)
+);
+
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.20;
+ground.receiveShadow = true;
+scene.add(ground);
+
+box(
+  scene, 4.2, 0.05, 6,
+  makeMaterial('#c0c9ce', 0.95),
+  0, -0.14, 9.0,
+  false
+);
+
+// -----------------------------------------------------
+// FLOOR VISIBILITY AND TRANSPARENCY
+// -----------------------------------------------------
+
+let selectedLevel = null;
+let ghostMode = false;
+let separated = false;
+
+function forEachMesh(group, callback) {
+  group.traverse(object => {
+    if (object.isMesh) callback(object);
+  });
+}
+
+function setOpacity(group, opacity) {
+  forEachMesh(group, mesh => {
+    if (!mesh.userData.originalMaterial) {
+      mesh.userData.originalMaterial =
+        Array.isArray(mesh.material)
+          ? mesh.material.map(m => m.clone())
+          : mesh.material.clone();
+    }
+
+    const original = mesh.userData.originalMaterial;
+
+    mesh.material = Array.isArray(original)
+      ? original.map(m => m.clone())
+      : original.clone();
+
+    const list = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+
+    list.forEach((material, index) => {
+      const source = Array.isArray(original)
+        ? original[index]
+        : original;
+
+      material.opacity = source.opacity * opacity;
+      material.transparent =
+        opacity < 0.999 || source.transparent;
+
+      material.depthWrite =
+        opacity < 0.999 ? false : source.depthWrite;
+
+      material.needsUpdate = true;
+    });
+  });
+}
+
+function restoreMaterials(group) {
+  forEachMesh(group, mesh => {
+    if (mesh.userData.originalMaterial) {
+      const original = mesh.userData.originalMaterial;
+
+      mesh.material = Array.isArray(original)
+        ? original.map(m => m.clone())
+        : original.clone();
+    }
+  });
+}
+
+function updateFloorPositions() {
+  floorGroups.forEach((floor, index) => {
+    floor.position.y =
+      index * FLOOR_HEIGHT + (separated ? index * 0.9 : 0);
+  });
+
+  roof.position.y =
+    FLOORS * FLOOR_HEIGHT + (separated ? 2 * 0.9 : 0);
+}
+
+function updateInterface() {
+  document.querySelectorAll('[data-floor]').forEach(button => {
+    button.classList.toggle(
+      'active',
+      Number(button.dataset.floor) === selectedLevel
+    );
+  });
+
+  $('ghost').checked = ghostMode;
+
+  if (selectedLevel === null) {
+    $('selection-title').textContent = separated
+      ? 'Block C · Floors separated'
+      : 'Block C · Three-floor overview';
+
+    $('selection-text').textContent =
+      'Student computer laboratories and academic/administrative offices ' +
+      'are represented on all three floors. Each level has one proposed ' +
+      'Wi-Fi AP marked for up to 100 users, IP cameras and an access switch.';
+
+    $('status').textContent = separated
+      ? 'Block C · Exploded view'
+      : 'Block C · All floors';
+  } else {
+    const details = [
+      'Student computer laboratory, staff offices, one proposed Wi-Fi AP labelled for up to 100 users, an access switch and IP cameras.',
+      'Student computer laboratory and academic/administrative offices, one proposed Wi-Fi AP labelled for up to 100 users, an access switch and IP cameras.',
+      'Student computer laboratory and staff offices, one proposed Wi-Fi AP labelled for up to 100 users, an access switch and IP cameras.'
+    ];
+
+    $('selection-title').textContent =
+      `Block C · Level ${selectedLevel}`;
+
+    $('selection-text').textContent = details[selectedLevel - 1];
+
+    $('status').textContent =
+      `Block C · Level ${selectedLevel}`;
+  }
+}
+
+function applyView() {
+  floorGroups.forEach(floor => {
+    const isSelected =
+      floor.userData.level === selectedLevel;
+
+    floor.visible =
+      selectedLevel === null || ghostMode || isSelected;
+
+    if (ghostMode && selectedLevel !== null && !isSelected) {
+      setOpacity(floor, 0.16);
+    } else {
+      restoreMaterials(floor);
+    }
+  });
+
+  roof.visible =
+    selectedLevel === null || selectedLevel === FLOORS || ghostMode;
+
+  if (ghostMode && selectedLevel !== null && selectedLevel !== FLOORS) {
+    setOpacity(roof, 0.18);
+  } else {
+    restoreMaterials(roof);
+  }
+
+  entrance.visible =
+    selectedLevel === null || selectedLevel === 1 || ghostMode;
+
+  updateInterface();
+}
+
+function selectFloor(level) {
+  selectedLevel = level;
+  ghostMode = false;
+  applyView();
+}
+
+function showAllFloors() {
+  selectedLevel = null;
+  ghostMode = false;
+  separated = false;
+
+  updateFloorPositions();
+  applyView();
+}
+
+// Floor buttons
+document.querySelectorAll('[data-floor]').forEach(button => {
+  button.addEventListener('click', () => {
+    selectFloor(Number(button.dataset.floor));
+  });
+});
+
+// Show all
+$('show-all').addEventListener('click', showAllFloors);
+
+// Exploded view
+$('separate').addEventListener('click', () => {
+  separated = true;
+  updateFloorPositions();
+  applyView();
+});
+
+// Reassemble
+$('reassemble').addEventListener('click', () => {
+  separated = false;
+  updateFloorPositions();
+  applyView();
+});
+
+// Camera reset
+$('reset-camera').addEventListener('click', () => {
+  camera.position.copy(HOME_CAMERA);
+  controls.target.set(0, 4.9, 0);
+  controls.update();
+});
+
+// Transparent floors
+$('ghost').addEventListener('change', event => {
+  ghostMode = event.target.checked;
+
+  if (ghostMode && selectedLevel === null) {
+    selectedLevel = 1;
+  }
+
+  applyView();
+});
+
+// -----------------------------------------------------
+// CLICK ON A FLOOR TO SELECT IT
+// -----------------------------------------------------
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+let pointerStart = null;
+
+canvas.addEventListener('pointerdown', event => {
+  pointerStart = {
+    x: event.clientX,
+    y: event.clientY
+  };
+});
+
+canvas.addEventListener('pointerup', event => {
+  if (!pointerStart) return;
+
+  const dragDistance =
+    Math.abs(event.clientX - pointerStart.x) +
+    Math.abs(event.clientY - pointerStart.y);
+
+  pointerStart = null;
+
+  // Do not treat camera rotation as a click.
+  if (dragDistance > 7) return;
+
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  const visibleFloors = floorGroups.filter(floor => floor.visible);
+  const hits = raycaster.intersectObjects(visibleFloors, true);
+
+  for (const hit of hits) {
+    let object = hit.object;
+
+    while (
+      object &&
+      object.userData.level === undefined
+    ) {
+      object = object.parent;
+    }
+
+    if (object && object.userData.level !== undefined) {
+      selectFloor(object.userData.level);
+      break;
+    }
+  }
+});
+
+// -----------------------------------------------------
+// WINDOW RESIZING AND ANIMATION
+// -----------------------------------------------------
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+try {
+  showAllFloors();
+  $('loading').style.display = 'none';
+  animate();
+} catch (error) {
+  console.error(error);
+
+  $('loading').style.display = 'none';
+  $('error').style.display = 'block';
+
+  $('error').textContent =
+    'Could not load the 3D building: ' +
+    error.message +
+    '. Press F12 in Firefox to inspect the console.';
+}
+</script>
+
+</body>
+</html>
