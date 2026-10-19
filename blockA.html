@@ -1,0 +1,1402 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Block A | Six-Floor Network Building Explorer</title>
+
+  <style>
+    
+
+
+    :root {
+      color-scheme: dark;
+      --panel: rgba(15, 23, 34, .91);
+      --line: rgba(218, 231, 244, .17);
+      --text: #edf4fb;
+      --muted: #a9b8c9;
+      --accent: #73d6ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, system-ui, sans-serif;
+      background: #aab8c3;
+      color: var(--text);
+    }
+
+    #scene {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .panel {
+      position: fixed;
+      z-index: 5;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      box-shadow: 0 18px 55px rgba(0,0,0,.22);
+      backdrop-filter: blur(14px);
+    }
+
+    #left-panel {
+      left: 16px;
+      top: 16px;
+      width: min(326px, calc(100vw - 32px));
+      padding: 17px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0 0 7px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+
+    .section-label {
+      margin: 15px 0 8px;
+      color: #91a6ba;
+      text-transform: uppercase;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+    }
+
+    .floor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    button {
+      font: inherit;
+      color: var(--text);
+      cursor: pointer;
+      border: 1px solid rgba(215,231,245,.19);
+      background: rgba(255,255,255,.055);
+      border-radius: 9px;
+      padding: 9px 8px;
+      font-size: 12px;
+    }
+
+    button:hover {
+      background: rgba(115,214,255,.13);
+      border-color: var(--accent);
+    }
+
+    button.active {
+      background: rgba(115,214,255,.19);
+      border-color: var(--accent);
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .action-grid button {
+      min-height: 38px;
+    }
+
+    .primary {
+      background: rgba(115,214,255,.16);
+      border-color: rgba(115,214,255,.52);
+    }
+
+    .check-row {
+      margin-top: 11px;
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    #level-card {
+      margin-top: 14px;
+      border-top: 1px solid var(--line);
+      padding-top: 13px;
+    }
+
+    #selected-title {
+      font-weight: 750;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    #selected-desc {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    #hint, #status {
+      padding: 11px 13px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    #hint {
+      position: fixed;
+      z-index: 4;
+      right: 16px;
+      bottom: 16px;
+      max-width: 365px;
+    }
+
+    #status {
+      position: fixed;
+      z-index: 4;
+      top: 16px;
+      right: 16px;
+    }
+
+    #loading {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: #d5e0e7;
+      color: #1d2a38;
+    }
+
+    #error {
+      display: none;
+      position: fixed;
+      z-index: 20;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      background: #4e1820;
+      color: white;
+      padding: 14px;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 620px) {
+      #left-panel {
+        left: 8px;
+        top: 8px;
+        width: 255px;
+        padding: 12px;
+        max-height: calc(100vh - 16px);
+      }
+
+      #status {
+        right: 8px;
+        top: auto;
+        bottom: 92px;
+      }
+
+      #hint {
+        right: 8px;
+        bottom: 8px;
+        width: 220px;
+    
+      }
+    }
+    .page-nav {
+  position: fixed;
+  z-index: 100;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #526575;
+  border-radius: 12px;
+  background: rgba(12, 20, 29, 0.95);
+}
+
+.page-nav a {
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: #eff7fb;
+  background: #1a2b39;
+  font: 12px system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.page-nav a:hover {
+  background: #14504b;
+}
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+
+<body>
+
+
+
+  <div id="loading">Loading Block A 3D Building...</div>
+  <canvas id="scene"></canvas>
+
+  <aside id="left-panel" class="panel">
+    <h1>Block A — Network Building</h1>
+
+    <p class="subtitle">
+      Six floors · Academic and administrative offices · DICTS NOC ·
+      Conference centre · IP cameras on every floor
+    </p>
+
+    <div class="section-label">Inspect a floor</div>
+
+    <div class="floor-grid">
+      <button data-level="1">Level 1</button>
+      <button data-level="2">Level 2</button>
+      <button data-level="3">Level 3</button>
+      <button data-level="4">Level 4</button>
+      <button data-level="5">Level 5</button>
+      <button data-level="6">Level 6</button>
+    </div>
+
+    <div class="section-label">Building controls</div>
+
+    <div class="action-grid">
+      <button id="show-all" class="primary">Show all floors</button>
+      <button id="separate">Separate floors</button>
+      <button id="reassemble">Reassemble</button>
+      <button id="reset-camera">Reset camera</button>
+    </div>
+
+    <label class="check-row">
+      <input type="checkbox" id="ghost-mode">
+      Ghost other floors
+    </label>
+
+    <div id="level-card">
+      <div id="selected-title">Block A · six floors</div>
+      <div id="selected-desc">
+        Select a floor to inspect offices, computers, network racks,
+        cable routes and security cameras. Drag to rotate and scroll to zoom.
+      </div>
+    </div>
+
+    <div style="margin-top:14px;font-size:10px;color:#a9b8c9;line-height:1.7">
+      <div>BLUE: Glass</div>
+      <div>ORANGE: ISP fibre</div>
+      <div>GREEN: Network cabling</div>
+      <div>BLACK: Network equipment</div>
+    </div>
+  </aside>
+
+  <div id="status" class="panel">
+    Assembled view · All floors
+  </div>
+
+  <div id="hint" class="panel">
+    Drag to rotate · Scroll to zoom · Right-drag to pan.
+    Click a floor or use the floor buttons.
+    NOC and conference-centre storeys are illustrative assumptions.
+  </div>
+
+  <div id="error"></div>
+  <nav class="page-nav">
+  <a href="ALL.html">Campus Overview</a>
+  <a href="blockA.html">Block A</a>
+  <a href="B&C.html">Block B</a>
+  <a href="C.html">Block C</a>
+</nav>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const canvas = document.getElementById('scene');
+    const loading = document.getElementById('loading');
+    const errorBox = document.getElementById('error');
+
+    const FLOOR_COUNT = 6;
+    const FLOOR_H = 3.25;
+    const WIDTH = 14;
+    const DEPTH = 10;
+    const HALF_W = WIDTH / 2;
+    const HALF_D = DEPTH / 2;
+
+    // These placements are assumptions because the brief does not
+    // specify the actual storeys for the NOC or conference centre.
+    const FLOOR_INFO = [
+      {
+        name: 'Administration + DICTS NOC',
+        type: 'noc',
+        detail: 'Administrative offices and the DICTS Network Operations Centre. The model shows an ISP fibre handoff terminating at the NOC. Level 1 is an illustrative placement.'
+      },
+      {
+        name: 'Academic Staff Offices',
+        type: 'office',
+        detail: 'Academic staff offices with approximately 50 user positions, access switching, LAN cable routes and IP cameras.'
+      },
+      {
+        name: 'Administrative Offices',
+        type: 'office',
+        detail: 'Administrative offices with approximately 50 user positions, access switching, LAN cable routes and IP cameras.'
+      },
+      {
+        name: 'Academic Staff Offices',
+        type: 'office',
+        detail: 'Academic staff offices with approximately 50 user positions, access switching, LAN cable routes and IP cameras.'
+      },
+      {
+        name: 'Academic + Administrative Offices',
+        type: 'office',
+        detail: 'Academic and administrative offices with approximately 50 user positions, access switching, LAN cable routes and IP cameras.'
+      },
+      {
+        name: 'Conference Centre',
+        type: 'conference',
+        detail: 'Conference centre for meetings and postgraduate classes. Level 6 is an illustrative placement.'
+      }
+    ];
+
+    const floorGroups = [];
+
+    let selectedLevel = null;
+    let ghostMode = false;
+    let separated = false;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#c4d0d8');
+    scene.fog = new THREE.Fog('#c4d0d8', 38, 95);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      250
+    );
+
+    const defaultCamera = new THREE.Vector3(24, 19, 27);
+    camera.position.copy(defaultCamera);
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 8.3, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.maxPolarAngle = Math.PI * 0.49;
+    controls.minDistance = 10;
+    controls.maxDistance = 65;
+
+    scene.add(
+      new THREE.HemisphereLight(0xe8f3ff, 0x65727c, 2.0)
+    );
+
+    const sun = new THREE.DirectionalLight(0xfff1dc, 3.0);
+    sun.position.set(-18, 30, 19);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -28;
+    sun.shadow.camera.right = 28;
+    sun.shadow.camera.top = 34;
+    sun.shadow.camera.bottom = -28;
+    sun.shadow.bias = -0.00015;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0xc4e6ff, 1.15);
+    fill.position.set(20, 14, -12);
+    scene.add(fill);
+
+    const mats = {
+      concrete: new THREE.MeshStandardMaterial({
+        color: '#c9ced0',
+        roughness: 0.88
+      }),
+      slabSide: new THREE.MeshStandardMaterial({
+        color: '#929ca3',
+        roughness: 0.9
+      }),
+      interior: new THREE.MeshStandardMaterial({
+        color: '#deded7',
+        roughness: 0.9
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: '#e4e6e3',
+        roughness: 0.86
+      }),
+      glass: new THREE.MeshPhysicalMaterial({
+        color: '#91cde3',
+        roughness: 0.22,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.24,
+        transmission: 0.12,
+        side: THREE.DoubleSide
+      }),
+      glassDark: new THREE.MeshStandardMaterial({
+        color: '#42616e',
+        roughness: 0.3,
+        metalness: 0.25
+      }),
+      trim: new THREE.MeshStandardMaterial({
+        color: '#53616b',
+        metalness: 0.55,
+        roughness: 0.4
+      }),
+      desk: new THREE.MeshStandardMaterial({
+        color: '#b4a18a',
+        roughness: 0.72
+      }),
+      deskLeg: new THREE.MeshStandardMaterial({
+        color: '#46515a',
+        metalness: 0.5,
+        roughness: 0.48
+      }),
+      screen: new THREE.MeshStandardMaterial({
+        color: '#10212e',
+        metalness: 0.12,
+        roughness: 0.25,
+        emissive: '#25506b',
+        emissiveIntensity: 0.6
+      }),
+      keyboard: new THREE.MeshStandardMaterial({
+        color: '#303940',
+        roughness: 0.65
+      }),
+      chair: new THREE.MeshStandardMaterial({
+        color: '#354b60',
+        roughness: 0.7
+      }),
+      rack: new THREE.MeshStandardMaterial({
+        color: '#303b45',
+        metalness: 0.55,
+        roughness: 0.42
+      }),
+      rackDoor: new THREE.MeshStandardMaterial({
+        color: '#54616a',
+        metalness: 0.5,
+        roughness: 0.35
+      }),
+      switch: new THREE.MeshStandardMaterial({
+        color: '#252f37',
+        metalness: 0.35,
+        roughness: 0.55
+      }),
+      cable: new THREE.MeshStandardMaterial({
+        color: '#36b978',
+        roughness: 0.45
+      }),
+      camera: new THREE.MeshStandardMaterial({
+        color: '#222d36',
+        metalness: 0.45,
+        roughness: 0.36
+      }),
+      light: new THREE.MeshStandardMaterial({
+        color: '#fff8d8',
+        emissive: '#fff0b0',
+        emissiveIntensity: 1.65
+      }),
+      stair: new THREE.MeshStandardMaterial({
+        color: '#aeb6ba',
+        roughness: 0.85
+      }),
+      fiber: new THREE.MeshStandardMaterial({
+        color: '#f18b42',
+        roughness: 0.34,
+        metalness: 0.12,
+        emissive: '#5e2b0c',
+        emissiveIntensity: 0.25
+      }),
+      conferenceSeat: new THREE.MeshStandardMaterial({
+        color: '#345a73',
+        roughness: 0.72
+      }),
+      conferenceDesk: new THREE.MeshStandardMaterial({
+        color: '#8b969e',
+        roughness: 0.7,
+        metalness: 0.16
+      })
+    };
+
+    function box(
+      parent, width, height, depth,
+      material, x, y, z, options = {}
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
+      );
+
+      mesh.position.set(x, y, z);
+      if (options.castShadow !== false) mesh.castShadow = true;
+      if (options.receiveShadow !== false) mesh.receiveShadow = true;
+
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function cylinder(
+      parent, radiusTop, radiusBottom,
+      height, material, x, y, z, segments = 12
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          radiusTop, radiusBottom, height, segments
+        ),
+        material
+      );
+
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+
+      return mesh;
+    }
+
+    function labelSprite(text, color = '#eaf6ff') {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 128;
+
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+
+      ctx.fillStyle = 'rgba(16,28,39,.88)';
+      ctx.beginPath();
+      ctx.roundRect(5, 5, 502, 118, 20);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(115,214,255,.9)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      const fontSize = Math.min(
+        45,
+        Math.floor(420 / Math.max(8, text.length * 0.62))
+      );
+
+      ctx.font = `700 ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 66, 470);
+
+      const texture = new THREE.CanvasTexture(c);
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          depthTest: true
+        })
+      );
+
+      sprite.scale.set(3.1, 0.78, 1);
+      return sprite;
+    }
+
+    function addCompactWorkstation(parent, x, z) {
+      // Desk
+      box(parent, 0.70, 0.075, 0.42,
+        mats.desk, x, 0.91, z);
+
+      // Desk legs
+      for (const dx of [-0.29, 0.29]) {
+        for (const dz of [-0.15, 0.15]) {
+          box(parent, 0.035, 0.69, 0.035,
+            mats.deskLeg, x + dx, 0.55, z + dz);
+        }
+      }
+
+      // Monitor and screen
+      box(parent, 0.39, 0.27, 0.045,
+        mats.trim, x, 1.12, z - 0.13);
+
+      box(parent, 0.345, 0.215, 0.014,
+        mats.screen, x, 1.12, z - 0.157,
+        { castShadow: false });
+
+      box(parent, 0.055, 0.13, 0.055,
+        mats.deskLeg, x, 0.995, z - 0.12);
+
+      // Keyboard
+      box(parent, 0.26, 0.018, 0.09,
+        mats.keyboard, x, 0.958, z + 0.105);
+
+      // Chair
+      box(parent, 0.37, 0.065, 0.34,
+        mats.chair, x, 0.51, z + 0.47);
+
+      box(parent, 0.37, 0.36, 0.065,
+        mats.chair, x, 0.72, z + 0.61);
+
+      cylinder(parent, 0.025, 0.025, 0.24,
+        mats.deskLeg, x, 0.36, z + 0.47, 8);
+    }
+
+    function addFiftyUserPositions(parent, columns = 10) {
+      const xStart = columns === 10 ? -3.825 : -3.4;
+      const xSpacing = columns === 10 ? 0.85 : 0.85;
+      const zRows = [-2.20, -1.10, 0.00, 1.10, 2.20];
+
+      for (const z of zRows) {
+        for (let column = 0; column < columns; column++) {
+          addCompactWorkstation(
+            parent,
+            xStart + column * xSpacing,
+            z
+          );
+        }
+      }
+    }
+
+    function addConferenceCentre(parent) {
+      // 5 rows x 10 seats = about 50 seats.
+      // Seating faces the presentation screen.
+      box(parent, 3.65, 1.72, 0.12,
+        mats.glassDark, 0, 2.02, -4.62);
+
+      box(parent, 3.38, 1.42, 0.035,
+        mats.screen, 0, 2.02, -4.545,
+        { castShadow: false });
+
+      // Presenter desk
+      box(parent, 0.88, 1.0, 0.62,
+        mats.conferenceDesk, 0, 0.81, -3.55);
+
+      for (let row = 0; row < 5; row++) {
+        const z = -2.35 + row * 1.08;
+
+        for (let col = 0; col < 10; col++) {
+          const x = -3.85 + col * 0.85;
+
+          box(parent, 0.39, 0.07, 0.39,
+            mats.conferenceSeat, x, 0.54, z);
+
+          box(parent, 0.39, 0.43, 0.07,
+            mats.conferenceSeat, x, 0.78, z + 0.19);
+
+          box(parent, 0.035, 0.34, 0.035,
+            mats.deskLeg, x - 0.13, 0.32, z - 0.10);
+
+          box(parent, 0.035, 0.34, 0.035,
+            mats.deskLeg, x + 0.13, 0.32, z - 0.10);
+        }
+      }
+
+      const label = labelSprite('CONFERENCE CENTRE');
+      label.scale.set(3.2, 0.8, 1);
+      label.position.set(0, 2.95, -4.45);
+      parent.add(label);
+    }
+
+    function addRack(parent, x, z) {
+      // Network/server rack cabinet
+      box(parent, 1.14, 2.28, 0.90,
+        mats.rack, x, 1.25, z);
+
+      box(parent, 0.98, 2.08, 0.045,
+        mats.rackDoor, x, 1.27, z + 0.475);
+
+      box(parent, 0.04, 1.90, 0.035,
+        mats.trim, x + 0.36, 1.27, z + 0.51);
+
+      // Switches, equipment bays and activity lights
+      for (let i = 0; i < 5; i++) {
+        const sy = 0.48 + i * 0.36;
+
+        box(parent, 0.81, 0.18, 0.075,
+          mats.switch, x - 0.02, sy, z + 0.52);
+
+        for (let j = 0; j < 10; j++) {
+          const ledMat = new THREE.MeshStandardMaterial({
+            color: j % 4 === 0 ? '#ffbd65' : '#58e39e',
+            emissive: j % 4 === 0 ? '#8c4b0d' : '#126d45',
+            emissiveIntensity: 0.65
+          });
+
+          box(parent, 0.027, 0.028, 0.02,
+            ledMat, x - 0.35 + j * 0.066,
+            sy, z + 0.565,
+            { castShadow: false, receiveShadow: false });
+        }
+
+        box(parent, 0.13, 0.07, 0.025,
+          mats.trim, x + 0.33, sy, z + 0.56,
+          { castShadow: false });
+      }
+
+      // Patch panel
+      box(parent, 0.82, 0.12, 0.06,
+        mats.trim, x, 2.18, z + 0.53);
+    }
+
+    function addCctv(parent, x, y, z, direction = 1) {
+      // Camera mounting bracket
+      box(parent, 0.22, 0.07, 0.22,
+        mats.camera, x, y + 0.06, z);
+
+      // Camera housing
+      const body = box(parent, 0.15, 0.11, 0.24,
+        mats.camera, x, y, z + 0.08 * direction);
+
+      body.rotation.x = -0.18 * direction;
+
+      // Camera lens
+      cylinder(parent, 0.045, 0.045, 0.03,
+        mats.glassDark, x, y, z + 0.205 * direction, 12
+      ).rotation.x = Math.PI / 2;
+    }
+
+    function addCableRun(
+      parent, points, material = mats.cable, radius = 0.027
+    ) {
+      const curve = new THREE.CatmullRomCurve3(
+        points.map(p => new THREE.Vector3(p[0], p[1], p[2]))
+      );
+
+      const cable = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 32, radius, 6, false),
+        material
+      );
+
+      cable.castShadow = false;
+      cable.receiveShadow = false;
+      parent.add(cable);
+    }
+
+    function addFloorLabel(parent, level) {
+      const info = FLOOR_INFO[level - 1];
+      const sprite = labelSprite(
+        `LEVEL ${level} | ${info.type.toUpperCase()}`
+      );
+
+      sprite.scale.set(3.5, 0.86, 1);
+      sprite.position.set(HALF_W - 0.1, 2.55, HALF_D + 0.10);
+      parent.add(sprite);
+    }
+
+    function addNocRoom(parent) {
+      // Glass-partitioned DICTS NOC
+      box(parent, 0.08, 2.42, 2.15,
+        mats.glass, 3.82, 1.52, -3.56,
+        { castShadow: false });
+
+      box(parent, 3.10, 2.42, 0.08,
+        mats.glass, 5.30, 1.52, -2.48,
+        { castShadow: false });
+
+      // Three core / distribution network racks
+      addRack(parent, 4.25, -3.63);
+      addRack(parent, 5.42, -3.63);
+      addRack(parent, 6.42, -3.63);
+
+      // NOC monitoring console
+      box(parent, 2.55, 0.09, 0.58,
+        mats.desk, 5.15, 0.97, -2.92);
+
+      for (const x of [4.35, 5.15, 5.95]) {
+        box(parent, 0.55, 0.38, 0.045,
+          mats.trim, x, 1.27, -3.05);
+
+        box(parent, 0.49, 0.31, 0.015,
+          mats.screen, x, 1.27, -3.02,
+          { castShadow: false });
+      }
+
+      const label = labelSprite(
+        'DICTS NETWORK OPERATIONS CENTRE',
+        '#ffd2a3'
+      );
+
+      label.scale.set(3.45, 0.86, 1);
+      label.position.set(5.25, 2.72, -3.35);
+      parent.add(label);
+    }
+
+    function makeFloor(level) {
+      const group = new THREE.Group();
+      group.userData.level = level;
+      group.position.y = (level - 1) * FLOOR_H;
+
+      scene.add(group);
+      floorGroups.push(group);
+
+      // Concrete floor slab and floor finish
+      box(group, WIDTH, 0.28, DEPTH,
+        mats.slabSide, 0, 0.14, 0);
+
+      box(group, WIDTH - 0.18, 0.025, DEPTH - 0.18,
+        mats.interior, 0, 0.30, 0);
+
+      // Perimeter concrete beams
+      box(group, WIDTH, 0.20, 0.22,
+        mats.concrete, 0, 2.98, -HALF_D + 0.10);
+
+      box(group, WIDTH, 0.20, 0.22,
+        mats.concrete, 0, 2.98, HALF_D - 0.10);
+
+      box(group, 0.22, 0.20, DEPTH,
+        mats.concrete, -HALF_W + 0.10, 2.98, 0);
+
+      box(group, 0.22, 0.20, DEPTH,
+        mats.concrete, HALF_W - 0.10, 2.98, 0);
+
+      // Structural columns
+      for (const x of [-6.75, 0, 6.75]) {
+        for (const z of [-4.75, 4.75]) {
+          box(group, 0.33, 2.95, 0.33,
+            mats.concrete, x, 1.72, z);
+        }
+      }
+
+      // Rear and side walls
+      box(group, WIDTH, 2.65, 0.16,
+        mats.wall, 0, 1.64, -HALF_D + 0.08);
+
+      box(group, 0.16, 2.65, DEPTH,
+        mats.wall, -HALF_W + 0.08, 1.64, 0);
+
+      box(group, 0.16, 2.65, DEPTH,
+        mats.wall, HALF_W - 0.08, 1.64, 0);
+
+      // Glass front wall
+      box(group, WIDTH - 0.45, 2.45, 0.055,
+        mats.glass, 0, 1.68, HALF_D - 0.11,
+        { castShadow: false });
+
+      // Window mullions
+      for (let x = -6.3; x <= 6.31; x += 2.1) {
+        box(group, 0.055, 2.56, 0.09,
+          mats.trim, x, 1.67, HALF_D - 0.13);
+      }
+
+      box(group, WIDTH - 0.3, 0.09, 0.12,
+        mats.trim, 0, 0.43, HALF_D - 0.13);
+
+      box(group, WIDTH - 0.3, 0.09, 0.12,
+        mats.trim, 0, 2.88, HALF_D - 0.13);
+
+      // Side glass
+      box(group, 0.055, 2.5, DEPTH - 0.5,
+        mats.glass, HALF_W - 0.12, 1.68, 0,
+        { castShadow: false });
+
+      for (let z = -4.0; z <= 4.01; z += 2) {
+        box(group, 0.09, 2.54, 0.055,
+          mats.trim, HALF_W - 0.15, 1.67, z);
+      }
+
+      const type = FLOOR_INFO[level - 1].type;
+
+      // Add rooms and their workstation furniture.
+      if (type === 'conference') {
+        addConferenceCentre(group);
+        addRack(group, 5.45, -3.35);
+      } else {
+        // The NOC floor has about 45 standard desks and the
+        // monitoring positions. Other office floors show 50 desks.
+        addFiftyUserPositions(group, type === 'noc' ? 9 : 10);
+
+        if (type === 'noc') {
+          addNocRoom(group);
+        } else {
+          addRack(group, 5.45, -3.35);
+        }
+      }
+
+      // Suspended green cable routes
+      addCableRun(group, [
+        [5.35, 2.62, -3.2],
+        [3.4, 2.62, -3.2],
+        [2.2, 2.62, -1.7],
+        [0.8, 2.62, -1.1]
+      ]);
+
+      addCableRun(group, [
+        [5.35, 2.62, -3.2],
+        [3.0, 2.62, -1.8],
+        [2.2, 2.62, 1.3],
+        [0.5, 2.62, 2.1]
+      ]);
+
+      addCableRun(group, [
+        [5.35, 2.62, -3.2],
+        [2.6, 2.62, -3.9],
+        [-1.2, 2.62, -3.9],
+        [-3.2, 2.62, -1.3]
+      ]);
+
+      // Vertical network riser
+      box(group, 0.09, 2.55, 0.09,
+        mats.cable, 6.35, 1.68, -4.40,
+        { castShadow: false });
+
+      // Ceiling lights
+      for (const x of [-4.6, -1.5, 1.7, 4.6]) {
+        box(group, 1.45, 0.045, 0.30,
+          mats.light, x, 2.80, 0.15,
+          { castShadow: false, receiveShadow: false });
+      }
+
+      // Four CCTV cameras on every floor
+      addCctv(group, -6.25, 2.63, 4.2, -1);
+      addCctv(group, 6.2, 2.63, 4.2, -1);
+      addCctv(group, -6.25, 2.63, -4.2, 1);
+      addCctv(group, 2.2, 2.63, -0.8, 1);
+
+      // Lift / stair core
+      box(group, 1.55, 2.60, 2.15,
+        mats.stair, -5.55, 1.66, -3.25);
+
+      box(group, 0.95, 2.15, 0.055,
+        mats.glassDark, -5.55, 1.47, -2.16);
+
+      box(group, 0.74, 1.75, 0.06,
+        mats.trim, -5.55, 1.38, -2.10);
+
+      for (let i = 0; i < 9; i++) {
+        box(group, 1.20, 0.10, 0.32,
+          mats.concrete,
+          -4.75, 0.46 + i * 0.20, -4.20 + i * 0.31);
+      }
+
+      box(group, 1.35, 0.10, 0.45,
+        mats.concrete, -4.75, 2.26, -1.45);
+
+      addFloorLabel(group, level);
+
+      return group;
+    }
+
+    // Ground plane
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200),
+      new THREE.MeshStandardMaterial({
+        color: '#9daab1',
+        roughness: 1
+      })
+    );
+
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.22;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Building plinth and entrance walkway
+    box(scene, 16, 0.22, 11.8,
+      mats.slabSide, 0, -0.12, 0,
+      { castShadow: false });
+
+    box(scene, 4.0, 0.05, 6.2,
+      new THREE.MeshStandardMaterial({ color: '#c5cdd1' }),
+      0, -0.005, 8.8,
+      { castShadow: false });
+
+    // Simple landscaping
+    for (const x of [-8.7, 8.7]) {
+      box(scene, 1.6, 0.48, 3.2,
+        mats.slabSide, x, 0.02, 4.1);
+
+      for (let i = 0; i < 5; i++) {
+        const shrub = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(
+            0.42 + (i % 2) * 0.12, 1
+          ),
+          new THREE.MeshStandardMaterial({
+            color: i % 2 ? '#477f62' : '#5c936d'
+          })
+        );
+
+        shrub.position.set(
+          x - 0.45 + (i % 3) * 0.44,
+          0.55,
+          3.0 + Math.floor(i / 3) * 0.85
+        );
+
+        shrub.scale.y = 0.8;
+        shrub.castShadow = true;
+        scene.add(shrub);
+      }
+    }
+
+    // Build the six floors
+    for (let level = 1; level <= FLOOR_COUNT; level++) {
+      makeFloor(level);
+    }
+
+    // Roof
+    const roof = new THREE.Group();
+    scene.add(roof);
+
+    box(roof, WIDTH + 0.35, 0.30, DEPTH + 0.35,
+      mats.concrete, 0, 0, 0);
+
+    box(roof, 2.2, 0.55, 1.9,
+      mats.slabSide, 4.3, 0.38, -2.8);
+
+    // Solar panels
+    for (let i = 0; i < 4; i++) {
+      const panel = box(roof, 1.9, 0.08, 1.2,
+        new THREE.MeshStandardMaterial({
+          color: '#25445a',
+          metalness: 0.48,
+          roughness: 0.28
+        }),
+        -3.9 + i * 2.05, 0.28, -1.8
+      );
+
+      panel.rotation.x = -0.10;
+
+      for (let j = 0; j < 3; j++) {
+        box(roof, 0.025, 0.014, 1.15,
+          mats.trim,
+          -4.55 + i * 2.05 + j * 0.44,
+          0.33, -1.8,
+          { castShadow: false });
+      }
+    }
+
+    roof.position.y = FLOOR_COUNT * FLOOR_H;
+
+    // Entrance doors
+    const entrance = new THREE.Group();
+    scene.add(entrance);
+
+    box(entrance, 2.35, 2.35, 0.12,
+      mats.glassDark, 0, 1.50, HALF_D + 0.16);
+
+    box(entrance, 1.03, 2.06, 0.05,
+      mats.glass, -0.55, 1.48, HALF_D + 0.24,
+      { castShadow: false });
+
+    box(entrance, 1.03, 2.06, 0.05,
+      mats.glass, 0.55, 1.48, HALF_D + 0.24,
+      { castShadow: false });
+
+    // ISP fibre entry cabinet
+    const ispInfrastructure = new THREE.Group();
+    scene.add(ispInfrastructure);
+
+    box(ispInfrastructure, 0.78, 1.12, 0.62,
+      mats.rack, 8.15, 0.47, 4.25);
+
+    box(ispInfrastructure, 0.66, 0.82, 0.06,
+      mats.rackDoor, 8.15, 0.48, 4.58);
+
+    box(ispInfrastructure, 0.42, 0.055, 0.035,
+      mats.fiber, 8.15, 0.75, 4.625,
+      { castShadow: false });
+
+    const ispLabel = labelSprite('ISP FIBRE ENTRY', '#ffd2a3');
+    ispLabel.scale.set(2.7, 0.68, 1);
+    ispLabel.position.set(8.15, 1.45, 4.25);
+    ispInfrastructure.add(ispLabel);
+
+    // Orange fibre route toward the illustrative Level 1 NOC
+    addCableRun(ispInfrastructure, [
+      [8.15, 0.12, 4.25],
+      [7.65, 0.10, 3.20],
+      [7.65, 0.10, 0.00],
+      [7.65, 0.10, -4.45],
+      [6.85, 0.20, -4.45],
+      [5.45, 0.85, -4.05],
+      [5.42, 1.55, -3.65]
+    ], mats.fiber, 0.045);
+
+    // Keep original materials to support transparent floor mode
+    function eachMesh(group, callback) {
+      group.traverse(obj => {
+        if (obj.isMesh) callback(obj);
+      });
+    }
+
+    function setFloorOpacity(group, opacity) {
+      eachMesh(group, mesh => {
+        if (!mesh.userData.originalMaterial) {
+          mesh.userData.originalMaterial =
+            Array.isArray(mesh.material)
+              ? mesh.material.map(m => m.clone())
+              : mesh.material.clone();
+        }
+
+        const original = mesh.userData.originalMaterial;
+
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((material, i) => {
+            const source = Array.isArray(original)
+              ? original[i] : original;
+
+            material.opacity = source.opacity * opacity;
+            material.transparent = opacity < 0.999 || source.transparent;
+            material.depthWrite = opacity < 0.999 ? false : source.depthWrite;
+            material.needsUpdate = true;
+          });
+        } else {
+          mesh.material.opacity = original.opacity * opacity;
+          mesh.material.transparent =
+            opacity < 0.999 || original.transparent;
+
+          mesh.material.depthWrite =
+            opacity < 0.999 ? false : original.depthWrite;
+
+          mesh.material.needsUpdate = true;
+        }
+      });
+    }
+
+    function restoreFloor(group) {
+      eachMesh(group, mesh => {
+        if (mesh.userData.originalMaterial) {
+          mesh.material =
+            Array.isArray(mesh.userData.originalMaterial)
+              ? mesh.userData.originalMaterial.map(m => m.clone())
+              : mesh.userData.originalMaterial.clone();
+        }
+      });
+    }
+
+    function updateFloorPositions() {
+      floorGroups.forEach((floor, index) => {
+        const base = index * FLOOR_H;
+        floor.position.y =
+          base + (separated ? index * 0.92 : 0);
+      });
+
+      roof.position.y =
+        FLOOR_COUNT * FLOOR_H +
+        (separated ? (FLOOR_COUNT - 1) * 0.92 : 0);
+    }
+
+    function updateControls() {
+      document.querySelectorAll('[data-level]').forEach(button => {
+        button.classList.toggle(
+          'active',
+          Number(button.dataset.level) === selectedLevel
+        );
+      });
+
+      document.getElementById('ghost-mode').checked = ghostMode;
+
+      const title = document.getElementById('selected-title');
+      const desc = document.getElementById('selected-desc');
+
+      if (selectedLevel === null) {
+        title.textContent = separated
+          ? 'Block A · floors separated'
+          : 'Block A · six floors';
+
+        desc.textContent =
+          'Office floors show approximately 50 user positions. ' +
+          'IP cameras appear on every floor. The NOC on Level 1 ' +
+          'and conference centre on Level 6 are illustrative placements.';
+      } else {
+        const info = FLOOR_INFO[selectedLevel - 1];
+        title.textContent = `Level ${selectedLevel} · ${info.name}`;
+        desc.textContent = info.detail;
+      }
+
+      document.getElementById('status').textContent =
+        `${separated ? 'Exploded view' : 'Assembled view'} · ` +
+        `${ghostMode ? 'Ghost mode on' :
+          selectedLevel ? `Level ${selectedLevel}` : 'All floors'}`;
+    }
+
+    function applyVisibility() {
+      floorGroups.forEach(group => {
+        const level = group.userData.level;
+
+        group.visible =
+          selectedLevel === null ||
+          ghostMode ||
+          level === selectedLevel;
+
+        if (ghostMode && selectedLevel !== null && level !== selectedLevel) {
+          setFloorOpacity(group, 0.16);
+        } else {
+          restoreFloor(group);
+        }
+      });
+
+      roof.visible =
+        selectedLevel === null ||
+        selectedLevel === FLOOR_COUNT ||
+        ghostMode;
+
+      if (ghostMode && selectedLevel !== null &&
+          selectedLevel < FLOOR_COUNT) {
+        setFloorOpacity(roof, 0.2);
+      } else {
+        restoreFloor(roof);
+      }
+
+      entrance.visible =
+        selectedLevel === null || selectedLevel === 1 || ghostMode;
+
+      ispInfrastructure.visible =
+        selectedLevel === null || selectedLevel === 1 || ghostMode;
+
+      updateControls();
+    }
+
+    function selectFloor(level) {
+      selectedLevel = level;
+      applyVisibility();
+    }
+
+    function showAll() {
+      selectedLevel = null;
+      ghostMode = false;
+      separated = false;
+
+      updateFloorPositions();
+      applyVisibility();
+    }
+
+    function separateFloors() {
+      selectedLevel = null;
+      ghostMode = false;
+      separated = true;
+
+      updateFloorPositions();
+      applyVisibility();
+    }
+
+    // Floor-selection buttons
+    document.querySelectorAll('[data-level]').forEach(button => {
+      button.addEventListener('click', () => {
+        selectFloor(Number(button.dataset.level));
+      });
+    });
+
+    document.getElementById('show-all').addEventListener('click', showAll);
+    document.getElementById('separate').addEventListener('click', separateFloors);
+
+    document.getElementById('reassemble').addEventListener('click', () => {
+      separated = false;
+      updateFloorPositions();
+      selectedLevel = null;
+      ghostMode = false;
+      applyVisibility();
+    });
+
+    document.getElementById('ghost-mode').addEventListener('change', event => {
+      ghostMode = event.target.checked;
+
+      if (ghostMode && selectedLevel === null) {
+        selectedLevel = 1;
+      }
+
+      applyVisibility();
+    });
+
+    document.getElementById('reset-camera').addEventListener('click', () => {
+      camera.position.copy(defaultCamera);
+      controls.target.set(0, 8.3, 0);
+      controls.update();
+    });
+
+    // Allow floors to be selected by clicking the 3D building.
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    canvas.addEventListener('pointerdown', event => {
+      canvas.dataset.downX = String(event.clientX);
+      canvas.dataset.downY = String(event.clientY);
+    });
+
+    canvas.addEventListener('pointerup', event => {
+      const dx = Math.abs(
+        event.clientX - Number(canvas.dataset.downX || event.clientX)
+      );
+
+      const dy = Math.abs(
+        event.clientY - Number(canvas.dataset.downY || event.clientY)
+      );
+
+      // Avoid selecting a floor after the user rotates the model.
+      if (dx > 5 || dy > 5) return;
+
+      pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(floorGroups, true);
+
+      for (const hit of hits) {
+        let obj = hit.object;
+
+        while (obj && obj !== scene &&
+               obj.userData.level === undefined) {
+          obj = obj.parent;
+        }
+
+        if (obj && obj.userData.level !== undefined) {
+          selectFloor(obj.userData.level);
+          break;
+        }
+      }
+    });
+
+    // Animation and responsive resizing
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    try {
+      showAll();
+      loading.style.display = 'none';
+      animate();
+    } catch (err) {
+      loading.style.display = 'none';
+      errorBox.style.display = 'block';
+      errorBox.textContent =
+        'Could not initialize the 3D scene: ' + err.message +
+        '. Check the browser console (F12).';
+
+      console.error(err);
+    }
+  </script>
+</body>
+</html>

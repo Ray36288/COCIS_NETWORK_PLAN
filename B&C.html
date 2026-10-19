@@ -1,0 +1,1518 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block B - 3D Network Building</title>
+
+<style>
+:root {
+  color-scheme: dark;
+  --panel: rgba(17, 27, 39, 0.94);
+  --border: rgba(220, 235, 248, 0.18);
+  --text: #edf5fc;
+  --muted: #afc0d0;
+  --blue: #73d9ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: Inter, Arial, sans-serif;
+  background: #c5d1d9;
+  color: var(--text);
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.panel {
+  position: fixed;
+  z-index: 5;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: 0 15px 45px rgba(0,0,0,.20);
+  backdrop-filter: blur(12px);
+}
+
+#controls {
+  left: 14px;
+  top: 14px;
+  width: min(340px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 19px;
+}
+
+.description {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.section {
+  margin: 15px 0 8px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #a4b9cc;
+}
+
+.floor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+button {
+  min-height: 36px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+button:hover,
+button.active {
+  border-color: var(--blue);
+  background: rgba(115,217,255,.16);
+}
+
+.primary {
+  border-color: rgba(115,217,255,.5);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--blue);
+}
+
+#selection {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+#selection-title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+#selection-text {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+#legend {
+  top: 14px;
+  right: 14px;
+  padding: 12px 14px;
+  font-size: 10px;
+  line-height: 1.9;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+}
+
+#status {
+  position: fixed;
+  right: 14px;
+  top: 146px;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+#hint {
+  right: 14px;
+  bottom: 14px;
+  max-width: 310px;
+  padding: 11px 13px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: #dce5eb;
+  color: #243444;
+}
+
+#error {
+  display: none;
+  position: fixed;
+  z-index: 30;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  padding: 14px;
+  background: #531c29;
+  border-radius: 8px;
+}
+
+@media (max-width: 650px) {
+  #controls {
+    left: 7px;
+    top: 7px;
+    width: 260px;
+    max-height: calc(100vh - 14px);
+    padding: 12px;
+  }
+
+  #legend {
+    top: 7px;
+    right: 7px;
+    max-width: 145px;
+    padding: 8px;
+    font-size: 9px;
+  }
+
+  #status {
+    top: 130px;
+    right: 7px;
+    max-width: 140px;
+  }
+
+  #hint {
+    right: 7px;
+    bottom: 7px;
+    width: 180px;
+    font-size: 9px;
+  }
+}
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body>
+
+<div id="loading">Loading Block B 3D building...</div>
+<canvas id="scene"></canvas>
+
+<aside id="controls" class="panel">
+  <h1>Block B</h1>
+
+  <div class="description">
+    Six-level computer laboratory building.
+    Explore the library, student Wi-Fi area, project laboratories,
+    thin-client laboratories and college data centre.
+  </div>
+
+  <div class="section">Select a floor</div>
+
+  <div class="floor-grid">
+    <button data-floor="1">Level 1</button>
+    <button data-floor="2">Level 2</button>
+    <button data-floor="3">Level 3</button>
+    <button data-floor="4">Level 4</button>
+    <button data-floor="5">Level 5</button>
+    <button data-floor="6">Level 6</button>
+  </div>
+
+  <div class="section">Building controls</div>
+
+  <div class="actions">
+    <button id="show-all" class="primary">Show all floors</button>
+    <button id="separate">Separate floors</button>
+    <button id="reassemble">Reassemble</button>
+    <button id="reset-camera">Reset camera</button>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" id="ghost">
+    Make other floors transparent
+  </label>
+
+  <div id="selection">
+    <div id="selection-title">Block B overview</div>
+    <div id="selection-text">
+      Six floors with student laboratories, a Level 1 library and wireless
+      area, a Level 4 thin-client facility and a Level 6 college data centre.
+    </div>
+  </div>
+
+  <div class="description" style="margin-top:12px">
+    Orange: Wi-Fi users and devices<br>
+    Blue: Wireless access points<br>
+    Green: LAN cabling<br>
+    Grey: Concrete and building structure
+  </div>
+
+  <div class="description" style="margin-top:12px">
+    The layout is illustrative, not an official architectural floor plan.
+    Level 1 shows eight example Wi-Fi users, not all 300+ concurrent users.
+  </div>
+</aside>
+
+<div id="legend" class="panel">
+  <strong>Building legend</strong><br>
+  <span class="dot" style="background:#46d69a"></span>LAN cabling<br>
+  <span class="dot" style="background:#60d7ff"></span>Wi-Fi access point<br>
+  <span class="dot" style="background:#d1d8dc"></span>Concrete structure<br>
+  <span class="dot" style="background:#c27a50"></span>Student using Wi-Fi
+</div>
+
+<div id="status" class="panel">Block B · All floors</div>
+
+<div id="hint" class="panel">
+  Drag to rotate the building. Scroll to zoom. Right-drag to pan.
+  Select a floor, separate the floors, or reassemble the building.
+</div>
+
+<div id="error"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = id => document.getElementById(id);
+
+const canvas = $('scene');
+const FLOOR_HEIGHT = 3.15;
+const BUILDING_WIDTH = 18;
+const BUILDING_DEPTH = 12;
+const HALF_WIDTH = BUILDING_WIDTH / 2;
+const HALF_DEPTH = BUILDING_DEPTH / 2;
+
+const FLOOR_INFO = [
+  {
+    title: 'Library and student wireless area',
+    description:
+      'Level 1 contains a library with a few desktop computers and a student wireless area intended to serve more than 300 concurrent users. Students are modelled using smartphones near Wi-Fi access points.'
+  },
+  {
+    title: 'Student computer laboratories',
+    description:
+      'Level 2 contains student computer laboratory workstations, network access infrastructure and IP cameras.'
+  },
+  {
+    title: 'Project labs, Academic Registry and Accounts',
+    description:
+      'Level 3 contains project laboratory spaces primarily for mobile devices, a few desktop computers, the College Academic Registry and the Accounts office.'
+  },
+  {
+    title: 'Small Lab and Big Lab',
+    description:
+      'Level 4 represents two laboratories with 450 thin-client workstations: 150 positions in the Small Lab and 300 positions in the Big Lab.'
+  },
+  {
+    title: 'Student computer laboratories',
+    description:
+      'Level 5 contains computer laboratory workstations, network access switching and IP cameras.'
+  },
+  {
+    title: 'College data centre',
+    description:
+      'Level 6 houses the college data centre, including rack representations for DHCP, email, DNS, Active Directory, network monitoring and core switching.'
+  }
+];
+
+// -----------------------------------------------------
+// THREE.JS SCENE
+// -----------------------------------------------------
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#c6d2da');
+scene.fog = new THREE.Fog('#c6d2da', 55, 110);
+
+const camera = new THREE.PerspectiveCamera(
+  43,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  300
+);
+
+const HOME_CAMERA = new THREE.Vector3(24, 22, 30);
+camera.position.copy(HOME_CAMERA);
+
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 8.6, 0);
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 10;
+controls.maxDistance = 75;
+
+scene.add(
+  new THREE.HemisphereLight(0xeaf5ff, 0x68737a, 2.1)
+);
+
+const sunlight = new THREE.DirectionalLight(0xfff1dc, 3);
+sunlight.position.set(-18, 30, 22);
+sunlight.castShadow = true;
+sunlight.shadow.mapSize.set(2048, 2048);
+sunlight.shadow.camera.left = -28;
+sunlight.shadow.camera.right = 28;
+sunlight.shadow.camera.top = 35;
+sunlight.shadow.camera.bottom = -25;
+scene.add(sunlight);
+
+const fillLight = new THREE.DirectionalLight(0xc5e7ff, 1.1);
+fillLight.position.set(20, 15, -18);
+scene.add(fillLight);
+
+// -----------------------------------------------------
+// MATERIALS
+// -----------------------------------------------------
+
+function material(color, roughness = 0.75, metalness = 0) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness,
+    metalness
+  });
+}
+
+const M = {
+  concrete: material('#c7cdd0', 0.9),
+  slab: material('#919ca4', 0.85),
+  floor: material('#dfdfd8', 0.9),
+  wall: material('#e8e9e5', 0.9),
+  frame: material('#52616b', 0.45, 0.45),
+  desk: material('#b7a18a', 0.75),
+  metal: material('#4c5962', 0.45, 0.4),
+  screen: material('#192e3c', 0.25, 0.1),
+  dark: material('#25343f', 0.45, 0.35),
+  chair: material('#405c70', 0.8),
+  rack: material('#28343e', 0.5, 0.45),
+  rackFront: material('#64727b', 0.4, 0.35),
+  green: material('#3ed18e', 0.45, 0.1),
+  blue: material('#5fd5ff', 0.25, 0.05),
+  white: material('#f5f0d6', 0.35),
+  skin: material('#ad7959', 0.8),
+  hair: material('#342923', 0.9),
+  pants: material('#33485d', 0.8),
+  shirt1: material('#3f83a6', 0.8),
+  shirt2: material('#4e8d68', 0.8),
+  shirt3: material('#b87249', 0.8),
+  phone: material('#182832', 0.25, 0.2),
+  phoneScreen: material('#64c9f6', 0.2, 0.1),
+  book1: material('#638a9e'),
+  book2: material('#52846b'),
+  book3: material('#bd8253')
+};
+
+// -----------------------------------------------------
+// GEOMETRY HELPERS
+// -----------------------------------------------------
+
+function box(parent, w, h, d, mat, x, y, z, cast = true) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    mat
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = cast;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+function cylinder(parent, rt, rb, h, mat, x, y, z, segments = 12) {
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(rt, rb, h, segments),
+    mat
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+function addLabel(parent, text, x, y, z, scale = 1) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 128;
+
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = 'rgba(17,30,42,.92)';
+  ctx.beginPath();
+  ctx.roundRect(4, 4, 632, 120, 16);
+  ctx.fill();
+
+  ctx.strokeStyle = '#73d9ff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = '#f0f8ff';
+  ctx.font = `bold ${Math.min(42, 520 / Math.max(10, text.length * .58))}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 320, 64, 590);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true
+    })
+  );
+
+  sprite.scale.set(3.5 * scale, 0.7 * scale, 1);
+  sprite.position.set(x, y, z);
+  parent.add(sprite);
+  return sprite;
+}
+
+function addCable(parent, points, radius = 0.025) {
+  const curve = new THREE.CatmullRomCurve3(
+    points.map(p => new THREE.Vector3(p[0], p[1], p[2]))
+  );
+
+  const tube = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 30, radius, 6, false),
+    M.green
+  );
+
+  tube.castShadow = false;
+  parent.add(tube);
+}
+
+// -----------------------------------------------------
+// WORKSTATIONS
+// -----------------------------------------------------
+
+function addComputer(parent, x, z, scale = 1, addChair = true) {
+  box(parent, .68 * scale, .07 * scale, .43 * scale,
+    M.desk, x, .88 * scale, z);
+
+  for (const dx of [-.27, .27]) {
+    for (const dz of [-.15, .15]) {
+      box(parent, .035 * scale, .66 * scale, .035 * scale,
+        M.metal, x + dx * scale, .53 * scale, z + dz * scale, false);
+    }
+  }
+
+  // Monitor and screen
+  box(parent, .34 * scale, .24 * scale, .045 * scale,
+    M.dark, x, 1.06 * scale, z - .13 * scale);
+
+  box(parent, .30 * scale, .19 * scale, .01 * scale,
+    M.screen, x, 1.06 * scale, z - .103 * scale, false);
+
+  box(parent, .04 * scale, .12 * scale, .04 * scale,
+    M.metal, x, .94 * scale, z - .12 * scale, false);
+
+  // Keyboard
+  box(parent, .23 * scale, .018 * scale, .08 * scale,
+    M.dark, x, .925 * scale, z + .10 * scale, false);
+
+  if (addChair) {
+    box(parent, .31 * scale, .055 * scale, .30 * scale,
+      M.chair, x, .51 * scale, z + .43 * scale);
+
+    box(parent, .31 * scale, .31 * scale, .055 * scale,
+      M.chair, x, .69 * scale, z + .56 * scale);
+
+    cylinder(parent, .025 * scale, .025 * scale, .22 * scale,
+      M.metal, x, .37 * scale, z + .43 * scale, 8);
+  }
+}
+
+function addComputerRows(parent, cols, rows, options = {}) {
+  const sx = options.sx ?? 1.0;
+  const sz = options.sz ?? 1.1;
+  const x0 = options.x0 ?? -(cols - 1) * sx / 2;
+  const z0 = options.z0 ?? -(rows - 1) * sz / 2;
+  const scale = options.scale ?? 1;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      addComputer(
+        parent,
+        x0 + c * sx,
+        z0 + r * sz,
+        scale
+      );
+    }
+  }
+}
+
+// -----------------------------------------------------
+// PEOPLE USING WI-FI
+// -----------------------------------------------------
+
+function segmentBetween(parent, a, b, radius, mat) {
+  const start = new THREE.Vector3(...a);
+  const end = new THREE.Vector3(...b);
+  const direction = new THREE.Vector3().subVectors(end, start);
+
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, direction.length(), 8),
+    mat
+  );
+
+  mesh.position.copy(start).add(end).multiplyScalar(.5);
+  mesh.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    direction.normalize()
+  );
+
+  mesh.castShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+function addWiFiStudent(parent, x, z, variation = 0) {
+  const shirts = [M.shirt1, M.shirt2, M.shirt3, M.chair];
+  const shirt = shirts[variation % shirts.length];
+
+  // Torso
+  const torso = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 12, 10),
+    shirt
+  );
+  torso.scale.set(.19, .30, .13);
+  torso.position.set(x, .94, z);
+  torso.castShadow = true;
+  parent.add(torso);
+
+  // Head
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(.145, 12, 10),
+    M.skin
+  );
+  head.position.set(x, 1.40, z + .015);
+  head.castShadow = true;
+  parent.add(head);
+
+  // Hair
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 10, 8),
+    M.hair
+  );
+  hair.scale.set(.15, .065, .15);
+  hair.position.set(x, 1.51, z + .005);
+  parent.add(hair);
+
+  // Legs
+  segmentBetween(
+    parent, [x - .075, .68, z],
+    [x - .10, .31, z], .055, M.pants
+  );
+
+  segmentBetween(
+    parent, [x + .075, .68, z],
+    [x + .10, .31, z], .055, M.pants
+  );
+
+  // Arms bend forward towards the phone.
+  segmentBetween(
+    parent, [x - .15, 1.12, z],
+    [x - .18, 1.00, z + .11], .045, shirt
+  );
+
+  segmentBetween(
+    parent, [x - .18, 1.00, z + .11],
+    [x - .045, .99, z + .22], .038, M.skin
+  );
+
+  segmentBetween(
+    parent, [x + .15, 1.12, z],
+    [x + .19, 1.02, z + .10], .045, shirt
+  );
+
+  segmentBetween(
+    parent, [x + .19, 1.02, z + .10],
+    [x + .07, 1.00, z + .22], .038, M.skin
+  );
+
+  // Smartphone held in both hands.
+  box(parent, .105, .17, .035,
+    M.phone, x + .015, 1.065, z + .245);
+
+  box(parent, .082, .135, .009,
+    M.phoneScreen, x + .015, 1.067, z + .266, false);
+
+  // Shoes
+  box(parent, .13, .055, .20,
+    M.dark, x - .10, .30, z + .035);
+
+  box(parent, .13, .055, .20,
+    M.dark, x + .10, .30, z + .035);
+}
+
+function addWiFiStudents(parent) {
+  // Illustrative sample group. This does not represent all 300+ users.
+  const positions = [
+    [-.65, -2.25],
+    [.95, -2.0],
+    [2.8, -1.75],
+    [4.75, -.90],
+    [-.25, -.15],
+    [1.75, .25],
+    [3.75, .95],
+    [5.35, 1.70]
+  ];
+
+  positions.forEach(([x, z], i) => {
+    addWiFiStudent(parent, x, z, i);
+  });
+
+  addLabel(parent, 'STUDENTS USING WI-FI', 2.5, 2.05, 1.8, .48);
+}
+
+function addAccessPoint(parent, x, z) {
+  // Ceiling-mounted access point
+  cylinder(parent, .13, .13, .075, M.dark,
+    x, 2.66, z, 16);
+
+  cylinder(parent, .038, .038, .04, M.blue,
+    x, 2.72, z, 12);
+
+  // Wireless coverage rings
+  const ring1 = new THREE.Mesh(
+    new THREE.RingGeometry(.23, .28, 32),
+    new THREE.MeshBasicMaterial({
+      color: '#60d5ff',
+      transparent: true,
+      opacity: .75,
+      side: THREE.DoubleSide
+    })
+  );
+
+  ring1.rotation.x = -Math.PI / 2;
+  ring1.position.set(x, 2.60, z);
+  parent.add(ring1);
+
+  const ring2 = new THREE.Mesh(
+    new THREE.RingGeometry(.38, .42, 32),
+    new THREE.MeshBasicMaterial({
+      color: '#60d5ff',
+      transparent: true,
+      opacity: .4,
+      side: THREE.DoubleSide
+    })
+  );
+
+  ring2.rotation.x = -Math.PI / 2;
+  ring2.position.set(x, 2.595, z);
+  parent.add(ring2);
+}
+
+// -----------------------------------------------------
+// LIBRARY ON LEVEL 1
+// -----------------------------------------------------
+
+function addBookshelves(parent) {
+  for (let row = 0; row < 3; row++) {
+    const x = -7.45 + row * .42;
+    const z = -.35;
+
+    box(parent, .20, 1.85, 2.8, M.desk, x, 1.24, z);
+
+    for (let shelf = 0; shelf < 5; shelf++) {
+      box(parent, .22, .035, 2.8,
+        M.frame, x, .48 + shelf * .35, z, false);
+
+      for (let book = 0; book < 8; book++) {
+        const materials = [M.book1, M.book2, M.book3];
+
+        box(
+          parent, .09, .24, .20,
+          materials[(book + shelf + row) % materials.length],
+          x, .63 + shelf * .35,
+          z - 1.12 + book * .32,
+          false
+        );
+      }
+    }
+  }
+}
+
+function addLibrary(parent) {
+  addBookshelves(parent);
+
+  // A few desktop computers for library use.
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 4; col++) {
+      addComputer(
+        parent,
+        -4.7 + col * 1.1,
+        -1.8 + row * 1.25,
+        .82
+      );
+    }
+  }
+
+  // Wi-Fi access points placed over the student wireless area.
+  addAccessPoint(parent, -2.3, 2.6);
+  addAccessPoint(parent, 1.0, 2.6);
+  addAccessPoint(parent, 4.0, 2.6);
+
+  // Students holding and using mobile phones.
+  addWiFiStudents(parent);
+
+  addLabel(parent, 'LIBRARY', -5.2, 2.5, 5.9, .6);
+
+  addLabel(
+    parent,
+    'STUDENT WIRELESS · 300+ USERS',
+    2.2, 2.45, 5.95, .48
+  );
+}
+
+// -----------------------------------------------------
+// IP CAMERAS ON EVERY FLOOR
+// -----------------------------------------------------
+
+function addCamera(parent, x, z) {
+  box(parent, .19, .07, .19, M.dark, x, 2.60, z);
+
+  const cameraBody = box(
+    parent, .13, .09, .20,
+    M.dark, x, 2.52, z + .10
+  );
+
+  cameraBody.rotation.x = .14;
+
+  const lens = cylinder(
+    parent, .04, .04, .025,
+    M.blue, x, 2.52, z + .205, 12
+  );
+
+  lens.rotation.x = Math.PI / 2;
+}
+
+function addCameras(parent) {
+  addCamera(parent, -8.6, 5.4);
+  addCamera(parent, 8.6, 5.4);
+  addCamera(parent, -8.6, -5.4);
+  addCamera(parent, 8.6, -5.4);
+}
+
+// -----------------------------------------------------
+// NETWORK RACKS AND DATA CENTRE
+// -----------------------------------------------------
+
+function addRack(parent, x, z, caption = '') {
+  box(parent, .94, 2.22, .78,
+    M.rack, x, 1.40, z);
+
+  box(parent, .82, 2.02, .045,
+    M.rackFront, x, 1.40, z + .415);
+
+  for (let i = 0; i < 6; i++) {
+    const y = .57 + i * .30;
+
+    box(parent, .69, .14, .045,
+      M.dark, x, y, z + .445);
+
+    for (let j = 0; j < 8; j++) {
+      const led = new THREE.Mesh(
+        new THREE.BoxGeometry(.025, .025, .018),
+        j % 3 === 0 ? M.blue : M.green
+      );
+
+      led.position.set(
+        x - .27 + j * .075,
+        y,
+        z + .472
+      );
+
+      parent.add(led);
+    }
+  }
+
+  if (caption) {
+    addLabel(parent, caption, x, 2.72, z, .43);
+  }
+}
+
+function addDataCentre(parent) {
+  // The server racks are INSIDE Level 6.
+  // There is deliberately no outdoor server cabinet.
+  addRack(parent, -6.2, -2.35, 'DHCP');
+  addRack(parent, -4.55, -2.35, 'DNS');
+  addRack(parent, -2.9, -2.35, 'EMAIL');
+  addRack(parent, -1.25, -2.35, 'ACTIVE DIRECTORY');
+  addRack(parent, .4, -2.35, 'MONITORING');
+  addRack(parent, 2.05, -2.35, 'CORE SWITCH');
+  addRack(parent, 3.7, -2.35, 'SERVER');
+
+  // Monitoring console and screens
+  box(parent, 4.5, .08, .75,
+    M.desk, 0, .90, 1.15);
+
+  for (let i = 0; i < 4; i++) {
+    box(parent, .68, .48, .045,
+      M.dark, -1.45 + i * .97, 1.24, .90);
+
+    box(parent, .60, .37, .012,
+      M.screen, -1.45 + i * .97, 1.24, .93, false);
+  }
+
+  addLabel(parent, 'COLLEGE DATA CENTRE',
+    0, 2.73, 4.95, .60);
+
+  addLabel(parent, 'DHCP · EMAIL · DNS · ACTIVE DIRECTORY',
+    0, 2.25, 4.95, .38);
+
+  addLabel(parent, 'NETWORK MONITORING',
+    0, 1.83, 4.95, .38);
+}
+
+// -----------------------------------------------------
+// PROJECT LABS ON LEVEL 3
+// -----------------------------------------------------
+
+function addMobileDesk(parent, x, z) {
+  box(parent, .66, .06, .40,
+    M.desk, x, .87, z);
+
+  for (const dx of [-.25, .25]) {
+    box(parent, .035, .65, .035,
+      M.metal, x + dx, .52, z);
+  }
+
+  // Tablet or mobile device
+  const tablet = box(parent, .23, .018, .16,
+    M.screen, x, .93, z - .04);
+
+  tablet.rotation.x = -.15;
+
+  box(parent, .30, .055, .28,
+    M.chair, x, .50, z + .40);
+}
+
+function addProjectLabs(parent) {
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 5; col++) {
+      addMobileDesk(
+        parent,
+        -5.2 + col * 1.15,
+        -2.25 + row * 1.35
+      );
+    }
+  }
+
+  // A few desktop computers
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 2; col++) {
+      addComputer(
+        parent,
+        2.7 + col * 1.15,
+        -2.1 + row * 1.4,
+        .85
+      );
+    }
+  }
+
+  // Partitions for the Registry and Accounts offices
+  box(parent, 3.0, 1.85, .11,
+    M.wall, -4.2, 1.24, 3.25);
+
+  box(parent, .11, 1.85, 2.8,
+    M.wall, -5.65, 1.24, 1.85);
+
+  box(parent, 3.15, 1.85, .11,
+    M.wall, 2.85, 1.24, 3.22);
+
+  box(parent, .11, 1.85, 2.8,
+    M.wall, 1.3, 1.24, 1.83);
+
+  addLabel(parent, 'ACADEMIC REGISTRY',
+    -4.1, 2.42, 4.85, .40);
+
+  addLabel(parent, 'ACCOUNTS OFFICE',
+    2.8, 2.42, 4.82, .40);
+}
+
+// -----------------------------------------------------
+// LEVEL 4: 450 THIN CLIENTS
+// -----------------------------------------------------
+
+function addThinClientLab(parent) {
+  const stations = [];
+
+  // 15 rows x 30 columns = 450 positions.
+  for (let row = 0; row < 15; row++) {
+    for (let col = 0; col < 30; col++) {
+      stations.push({
+        x: -8 + col * .55,
+        z: -3.5 + row * .49
+      });
+    }
+  }
+
+  function createInstances(w, h, d, mat, positionFn) {
+    const mesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(w, h, d),
+      mat,
+      stations.length
+    );
+
+    const dummy = new THREE.Object3D();
+
+    stations.forEach((p, i) => {
+      const pos = positionFn(p);
+
+      dummy.position.set(pos[0], pos[1], pos[2]);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    });
+
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    parent.add(mesh);
+  }
+
+  // Shared geometry keeps 450 stations efficient to render.
+  createInstances(.43, .035, .27, M.desk,
+    p => [p.x, .86, p.z]);
+
+  createInstances(.23, .15, .035, M.dark,
+    p => [p.x, 1.00, p.z - .095]);
+
+  createInstances(.195, .115, .008, M.screen,
+    p => [p.x, 1.00, p.z - .073]);
+
+  createInstances(.105, .035, .105, M.rack,
+    p => [p.x + .13, .91, p.z + .075]);
+
+  // Partition between the Small Lab and Big Lab
+  box(parent, .09, 2.0, 8.5,
+    M.wall, -2.75, 1.25, .05);
+
+  addLabel(parent, 'SMALL LAB · 150 THIN CLIENTS',
+    -5.7, 2.63, 5.95, .40);
+
+  addLabel(parent, 'BIG LAB · 300 THIN CLIENTS',
+    2.25, 2.63, 5.95, .40);
+
+  addLabel(parent, '450 THIN-CLIENT POSITIONS',
+    -1.6, 2.28, -5.70, .43);
+}
+
+// -----------------------------------------------------
+// GENERAL FLOOR INTERIORS
+// -----------------------------------------------------
+
+function addNormalLab(parent) {
+  addComputerRows(parent, 7, 4, {
+    x0: -4.5,
+    z0: -1.8,
+    sx: 1.25,
+    sz: 1.18,
+    scale: .82
+  });
+
+  addRack(parent, 7.0, -3.55, 'ACCESS SWITCH');
+  addLabel(parent, 'STUDENT COMPUTER LAB',
+    0, 2.60, 5.95, .48);
+}
+
+function addFloorContents(parent, level) {
+  if (level === 1) {
+    addLibrary(parent);
+    addRack(parent, 7.1, -3.5, 'ACCESS SWITCH');
+  } else if (level === 3) {
+    addProjectLabs(parent);
+    addRack(parent, 7.0, -3.55, 'ACCESS SWITCH');
+  } else if (level === 4) {
+    addThinClientLab(parent);
+  } else if (level === 6) {
+    addDataCentre(parent);
+  } else {
+    addNormalLab(parent);
+  }
+
+  // Additional wireless APs for selected lab floors.
+  if (level === 2) {
+    addAccessPoint(parent, -5, .6);
+  }
+
+  if (level === 5) {
+    addAccessPoint(parent, 1, 0);
+  }
+}
+
+// -----------------------------------------------------
+// BUILDING STRUCTURE AND SIX FLOORS
+// -----------------------------------------------------
+
+const building = new THREE.Group();
+scene.add(building);
+
+const floors = [];
+
+function createFloor(level) {
+  const group = new THREE.Group();
+
+  group.userData.level = level;
+  group.position.y = (level - 1) * FLOOR_HEIGHT;
+  building.add(group);
+
+  // Concrete slab and interior flooring
+  box(group, BUILDING_WIDTH, .25, BUILDING_DEPTH,
+    M.slab, 0, .13, 0);
+
+  box(group, BUILDING_WIDTH - .22, .025,
+    BUILDING_DEPTH - .22, M.floor, 0, .275, 0);
+
+  // Rear and side walls
+  box(group, BUILDING_WIDTH, 2.67, .15,
+    M.wall, 0, 1.61, -HALF_DEPTH + .075);
+
+  box(group, .15, 2.67, BUILDING_DEPTH,
+    M.wall, -HALF_WIDTH + .075, 1.61, 0);
+
+  box(group, .15, 2.67, BUILDING_DEPTH,
+    M.wall, HALF_WIDTH - .075, 1.61, 0);
+
+  // Glass front
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: '#84c6df',
+    roughness: .22,
+    metalness: .08,
+    transparent: true,
+    opacity: .25,
+    side: THREE.DoubleSide
+  });
+
+  box(group, BUILDING_WIDTH - .35, 2.48, .055,
+    glass, 0, 1.62, HALF_DEPTH - .09, false);
+
+  for (let x = -HALF_WIDTH + .3; x <= HALF_WIDTH - .1; x += 2.05) {
+    box(group, .055, 2.54, .085,
+      M.frame, x, 1.62, HALF_DEPTH - .12);
+  }
+
+  box(group, BUILDING_WIDTH - .18, .09, .12,
+    M.frame, 0, .42, HALF_DEPTH - .12);
+
+  box(group, BUILDING_WIDTH - .18, .09, .12,
+    M.frame, 0, 2.86, HALF_DEPTH - .12);
+
+  // Side glazing
+  box(group, .055, 2.5, BUILDING_DEPTH - .5,
+    glass, HALF_WIDTH - .11, 1.62, 0, false);
+
+  for (let z = -HALF_DEPTH + .5; z < HALF_DEPTH; z += 2) {
+    box(group, .085, 2.5, .055,
+      M.frame, HALF_WIDTH - .14, 1.62, z);
+  }
+
+  // Structural concrete columns
+  for (const x of [-HALF_WIDTH + .32, 0, HALF_WIDTH - .32]) {
+    for (const z of [-HALF_DEPTH + .25, HALF_DEPTH - .25]) {
+      box(group, .30, 2.95, .30,
+        M.concrete, x, 1.63, z);
+    }
+  }
+
+  addLabel(group, `LEVEL ${level}`,
+    0, 2.62, HALF_DEPTH + .20, .48);
+
+  // Furniture and network equipment for this level
+  addFloorContents(group, level);
+
+  // Four IP cameras on every floor
+  addCamera(group, -HALF_WIDTH + .38, HALF_DEPTH - .35);
+  addCamera(group, HALF_WIDTH - .38, HALF_DEPTH - .35);
+  addCamera(group, -HALF_WIDTH + .38, -HALF_DEPTH + .35);
+  addCamera(group, HALF_WIDTH - .38, -HALF_DEPTH + .35);
+
+  // Vertical LAN riser
+  box(group, .09, 2.45, .09,
+    M.green, HALF_WIDTH - .55, 1.52, -HALF_DEPTH + .40, false);
+
+  // Ceiling lights
+  for (const x of [-5, -1.5, 2, 5]) {
+    box(group, 1.15, .045, .25,
+      M.white, x, 2.78, 0, false);
+  }
+
+  return group;
+}
+
+for (let level = 1; level <= 6; level++) {
+  floors.push(createFloor(level));
+}
+
+// -----------------------------------------------------
+// ROOF, ENTRANCE AND GROUND
+// -----------------------------------------------------
+
+const roof = new THREE.Group();
+building.add(roof);
+
+box(roof, BUILDING_WIDTH + .35, .30,
+  BUILDING_DEPTH + .35, M.concrete, 0, 0, 0);
+
+roof.position.y = 6 * FLOOR_HEIGHT;
+
+// Building entrance only. No external server or rack.
+const entrance = new THREE.Group();
+building.add(entrance);
+
+box(entrance, 2.4, 2.25, .12,
+  M.frame, 0, 1.35, HALF_DEPTH + .12);
+
+box(entrance, 2.08, 1.95, .05,
+  new THREE.MeshStandardMaterial({
+    color: '#84c6df',
+    transparent: true,
+    opacity: .45
+  }),
+  0, 1.38, HALF_DEPTH + .20, false);
+
+box(entrance, 3.2, .12, 1.1,
+  M.concrete, 0, 2.58, HALF_DEPTH + .52);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(100, 100),
+  material('#9ba9b0', 1)
+);
+
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -.20;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Small walkway outside the entrance; no server cabinet is placed here.
+box(scene, 4.2, .05, 6.0,
+  material('#bfc8cd', .95),
+  0, -.14, 9.1, false);
+
+// A LAN route shown inside the building, not to an outdoor server.
+addCable(building, [
+  [7.1, 3.0, -3.5],
+  [7.45, 5.4, -4.5],
+  [7.45, 9.0, -4.5],
+  [7.45, 13.2, -4.5],
+  [7.45, 16.2, -4.5]
+], .035);
+
+// -----------------------------------------------------
+// FLOOR SELECTION, TRANSPARENCY AND EXPLODED VIEW
+// -----------------------------------------------------
+
+let selectedLevel = null;
+let ghostMode = false;
+let separated = false;
+
+function traverseMeshes(group, callback) {
+  group.traverse(obj => {
+    if (obj.isMesh) callback(obj);
+  });
+}
+
+function makeTransparent(group, opacity) {
+  traverseMeshes(group, mesh => {
+    if (!mesh.userData.originalMaterial) {
+      mesh.userData.originalMaterial =
+        Array.isArray(mesh.material)
+          ? mesh.material.map(m => m.clone())
+          : mesh.material.clone();
+    }
+
+    const original = mesh.userData.originalMaterial;
+
+    mesh.material = Array.isArray(original)
+      ? original.map(m => m.clone())
+      : original.clone();
+
+    const list = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+
+    list.forEach((m, i) => {
+      const src = Array.isArray(original) ? original[i] : original;
+      m.opacity = src.opacity * opacity;
+      m.transparent = opacity < 1 || src.transparent;
+      m.depthWrite = opacity < 1 ? false : src.depthWrite;
+      m.needsUpdate = true;
+    });
+  });
+}
+
+function restoreMaterials(group) {
+  traverseMeshes(group, mesh => {
+    if (mesh.userData.originalMaterial) {
+      const original = mesh.userData.originalMaterial;
+
+      mesh.material = Array.isArray(original)
+        ? original.map(m => m.clone())
+        : original.clone();
+    }
+  });
+}
+
+function updateFloorPositions() {
+  floors.forEach((floor, index) => {
+    const originalY = index * FLOOR_HEIGHT;
+    const extraY = separated ? index * .92 : 0;
+
+    floor.position.y = originalY + extraY;
+  });
+
+  roof.position.y =
+    6 * FLOOR_HEIGHT + (separated ? 5 * .92 : 0);
+}
+
+function updateInterface() {
+  document.querySelectorAll('[data-floor]').forEach(button => {
+    button.classList.toggle(
+      'active',
+      Number(button.dataset.floor) === selectedLevel
+    );
+  });
+
+  $('ghost').checked = ghostMode;
+
+  if (selectedLevel === null) {
+    $('selection-title').textContent =
+      separated ? 'Block B · Exploded view' : 'Block B · Six-floor overview';
+
+    $('selection-text').textContent =
+      'Level 1: library and wireless area for 300+ concurrent users. ' +
+      'Level 3: project labs, Academic Registry and Accounts. ' +
+      'Level 4: Small Lab and Big Lab with 450 thin-client positions. ' +
+      'Level 6: college data centre with DHCP, email, DNS, Active Directory ' +
+      'and network monitoring.';
+
+    $('status').textContent =
+      separated ? 'Block B · Floors separated' : 'Block B · All six floors';
+  } else {
+    const info = FLOOR_INFO[selectedLevel - 1];
+
+    $('selection-title').textContent =
+      `Level ${selectedLevel} · ${info.title}`;
+
+    $('selection-text').textContent = info.description;
+
+    $('status').textContent =
+      `Block B · Level ${selectedLevel}`;
+  }
+}
+
+function applyFloorVisibility() {
+  floors.forEach(floor => {
+    const isSelected =
+      selectedLevel === floor.userData.level;
+
+    floor.visible =
+      selectedLevel === null || ghostMode || isSelected;
+
+    if (ghostMode && selectedLevel !== null && !isSelected) {
+      makeTransparent(floor, .16);
+    } else {
+      restoreMaterials(floor);
+    }
+  });
+
+  roof.visible =
+    selectedLevel === null || selectedLevel === 6 || ghostMode;
+
+  if (ghostMode && selectedLevel !== null && selectedLevel !== 6) {
+    makeTransparent(roof, .20);
+  } else {
+    restoreMaterials(roof);
+  }
+
+  entrance.visible =
+    selectedLevel === null || selectedLevel === 1 || ghostMode;
+
+  updateInterface();
+}
+
+function selectFloor(level) {
+  selectedLevel = level;
+  ghostMode = false;
+  applyFloorVisibility();
+}
+
+function showAllFloors() {
+  selectedLevel = null;
+  ghostMode = false;
+  separated = false;
+  updateFloorPositions();
+  applyFloorVisibility();
+}
+
+document.querySelectorAll('[data-floor]').forEach(button => {
+  button.addEventListener('click', () => {
+    selectFloor(Number(button.dataset.floor));
+  });
+});
+
+$('show-all').addEventListener('click', showAllFloors);
+
+$('separate').addEventListener('click', () => {
+  separated = true;
+  updateFloorPositions();
+  applyFloorVisibility();
+});
+
+$('reassemble').addEventListener('click', () => {
+  separated = false;
+  updateFloorPositions();
+  applyFloorVisibility();
+});
+
+$('reset-camera').addEventListener('click', () => {
+  camera.position.copy(HOME_CAMERA);
+  controls.target.set(0, 8.6, 0);
+  controls.update();
+});
+
+$('ghost').addEventListener('change', event => {
+  ghostMode = event.target.checked;
+
+  if (ghostMode && selectedLevel === null) {
+    selectedLevel = 1;
+  }
+
+  applyFloorVisibility();
+});
+
+// Click a visible floor to select it.
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let pointerDown = null;
+
+canvas.addEventListener('pointerdown', event => {
+  pointerDown = {
+    x: event.clientX,
+    y: event.clientY
+  };
+});
+
+canvas.addEventListener('pointerup', event => {
+  if (!pointerDown) return;
+
+  const moved =
+    Math.abs(event.clientX - pointerDown.x) > 5 ||
+    Math.abs(event.clientY - pointerDown.y) > 5;
+
+  pointerDown = null;
+
+  // Ignore clicks that were actually camera drags.
+  if (moved) return;
+
+  pointer.x = event.clientX / window.innerWidth * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  const visibleFloors = floors.filter(f => f.visible);
+  const hits = raycaster.intersectObjects(visibleFloors, true);
+
+  for (const hit of hits) {
+    let obj = hit.object;
+
+    while (obj && obj.userData.level === undefined) {
+      obj = obj.parent;
+    }
+
+    if (obj && obj.userData.level !== undefined) {
+      selectFloor(obj.userData.level);
+      break;
+    }
+  }
+});
+
+// -----------------------------------------------------
+// RESPONSIVE WINDOW AND RENDER LOOP
+// -----------------------------------------------------
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+try {
+  showAllFloors();
+  $('loading').style.display = 'none';
+  animate();
+} catch (error) {
+  console.error(error);
+  $('loading').style.display = 'none';
+  $('error').style.display = 'block';
+  $('error').textContent =
+    'The 3D building could not load: ' + error.message +
+    '. Press F12 in Firefox to view the error details.';
+}
+</script>
+</body>
+</html>
